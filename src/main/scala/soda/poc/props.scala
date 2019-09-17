@@ -112,14 +112,17 @@ class LengthProp(key: String, initial: LengthSpec) extends PropertyWithInit[Leng
 }
 
 object ColorProp {
-  def parseColor(colorStr: String): Color = {
+  def parseColor(colorStr: String, initial: Color): Color = {
     if (colorStr(0) == '#') {
       val r = Integer.decode("0x" + colorStr.substring(1, 3))
       val g = Integer.decode("0x" + colorStr.substring(3, 5))
       val b = Integer.decode("0x" + colorStr.substring(5, 7))
       new Color(r, g, b)
+    } else if (colorStr == "transparent") {
+      new Color(0x00000000, true)
     } else {
-      null
+      println("Unhandled: " + colorStr)
+      initial
     }
   }
 }
@@ -129,7 +132,7 @@ class ColorProp(key: String) {
   var computed: Color = null
 
   def init(nd: NodeData, fallback: Color) = {
-    specified = Property.getSpec(nd, key).map(ColorProp.parseColor).getOrElse(null)
+    specified = Property.getSpec(nd, key).map(ColorProp.parseColor(_, null)).getOrElse(null)
 
     computed = if (specified == null) {
       fallback

@@ -460,11 +460,12 @@ class BoxWithProps(
 
   def computeBorderProps(vwProps: ViewPortProps) = {
     val nd = elemNode.nd
+    val currColor = colorProp.computed
     b.border.forEach{(name, side) =>
       val colorKey = s"border-$name-color"
       val styleKey = s"border-$name-style"
       val thickKey = s"border-$name-width"
-      side.color = Property.getSpec(nd, colorKey).map(ColorProp.parseColor).getOrElse(colorProp.computed)
+      side.color = Property.getSpec(nd, colorKey).map(ColorProp.parseColor(_, currColor)).getOrElse(currColor)
       side.style = Property.getSpec(nd, styleKey).getOrElse("none")
       if (side.style != "none") {
         val specThick = Property.getSpec(nd, thickKey).getOrElse("medium")
