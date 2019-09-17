@@ -42,7 +42,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
           case _ => doLayout(boxP, vwProps)
         }
       case aib: AnonInlineBox => {
-        println("Anon inline")
+        // println("Anon inline")
         aib.inlineLayout()
         // boxP.getInlineRenderables.foreach(boxP.addInlineRenderable)
       }
