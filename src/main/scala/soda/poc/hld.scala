@@ -38,6 +38,8 @@ object Layout {
     initCB.contentHeight = vwProps.height
 
     rootBoxP.formattingContext.foreach(_.layout(vwProps))
+
+    rootBoxP.computeRelativeOffsets(vwProps)
   }
 
   def separateAbsAndFixed(boxP: BoxTreeNode):Unit = {

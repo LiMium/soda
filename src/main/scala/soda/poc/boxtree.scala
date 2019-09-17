@@ -59,6 +59,10 @@ class Box {
 
   var offsetX = 0
   var offsetY = 0
+
+  var renderOffsetX = 0
+  var renderOffsetY = 0
+
   var contentWidth = 0
   var contentHeight = 0
   var visibility: Boolean = true
@@ -273,6 +277,7 @@ sealed trait BoxTreeNode {
   def dump(level: Int): String
 
   def computeL2Props(vwProps: ViewPortProps):Unit
+  def computeRelativeOffsets(vwProps: ViewPortProps): Unit = {}
 }
 
 sealed trait HasBox {
@@ -422,10 +427,10 @@ class BoxWithProps(
   var inflowChildren : Vector[BoxTreeNode] = null
 
   val isRootElem = elemNode.elem.isRootElem
+  val positionProp = elemNode.positionProp.get
 
   lazy val createsBFC = {
     val floatProp = elemNode.floatProp.get
-    val positionProp = elemNode.positionProp.get
     floatProp == "left" || floatProp == "right" || positionProp == "absolute" || positionProp == "fixed"
     // TODO: Add more conditions
   }
@@ -519,7 +524,7 @@ class BoxWithProps(
 
   def paint(g: Graphics2D): Unit = {
     val gt = g.create().asInstanceOf[Graphics2D]
-    gt.translate(b.offsetX, b.offsetY)
+    gt.translate(b.offsetX + b.renderOffsetX, b.offsetY + b.renderOffsetY)
 
     val bgColor = backgroundColor.specified
     b.paint(gt, bgColor)
@@ -666,6 +671,7 @@ class BoxWithProps(
   }
 
   def containingWidth = containingBlock.b.contentWidth
+  def containingHeight = containingBlock.b.contentHeight
 
   def getComputedWidth = {
     size.width.specified match {
@@ -707,6 +713,23 @@ class BoxWithProps(
       case ParentRelLength(pct) => Some((pct * containingWidth).toInt)
       case frl: FontRelLength => Some(frl.compute(fontProp).toInt)
     }
+  }
+
+  private def findRelativeOffset(factor:Int, parentLength: Float, prop: String, vwProps: ViewPortProps) = {
+    Property.getSpec(elemNode.nd, prop).map(LengthProp.parseSpec(_)). map {
+      case AbsLength(pxs) => pxs.toInt
+      case ParentRelLength(pct) => (pct * parentLength).toInt
+      case frl: FontRelLength => frl.compute(fontProp).toInt
+      case _ => 0
+    }.map(_ * factor)
+  }
+
+  override def computeRelativeOffsets(vwProps: ViewPortProps) = {
+    if (positionProp == "relative") {
+      b.renderOffsetY = findRelativeOffset(1, containingHeight, "top", vwProps).orElse(findRelativeOffset(-1, containingHeight, "bottom", vwProps)).getOrElse(0)
+      b.renderOffsetX = findRelativeOffset(1, containingWidth, "left", vwProps).orElse(findRelativeOffset(-1, containingWidth, "right", vwProps)).getOrElse(0)
+    }
+    domChildren.foreach {_.computeRelativeOffsets(vwProps)}
   }
 
   private def getComputedPadding(ls: LengthSpec, vwProps: ViewPortProps) = {
@@ -753,6 +776,7 @@ class BoxWithProps(
     specHeight.isDefined
   }
 
+  override def toString = debugId
 }
 
 class InitialContainingBlock() extends HasBox {
