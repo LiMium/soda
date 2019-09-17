@@ -106,7 +106,7 @@ class Box {
         val w = img.getWidth
         val h = img.getHeight
         // g.drawImage(img, 0, 0, w, h, null)
-        g.drawImage(img, 0, 0, contentWidth, contentHeight, null)
+        g.drawImage(img, contentOffsetX, contentOffsetY, contentWidth, contentHeight, null)
       }
     }
   }
@@ -273,7 +273,7 @@ class InlinePseudoContext {
 sealed trait BoxTreeNode {
   def paint(g: Graphics2D): Unit
   def generateBoxes(): Unit
-  def getInlineRenderables : Vector[InlineRenderable]
+  def getInlineRenderables(vwProps: ViewPortProps) : Vector[InlineRenderable]
   def dump(level: Int): String
 
   def computeL2Props(vwProps: ViewPortProps):Unit
@@ -308,7 +308,7 @@ class TextRun(tn: TextNode, boxP: BoxWithProps ) extends BoxTreeNode {
     all.toList
   }
 
-  def getInlineRenderables : Vector[InlineRenderable] = {
+  def getInlineRenderables(vwProps: ViewPortProps) : Vector[InlineRenderable] = {
     val words = split(tn.text.text)
     words.map(new InlineWordRenderable(_, boxP.b.visibility, boxP.colorProp, boxP.fontProp)).toVector
   }
@@ -392,12 +392,12 @@ class AnonInlineBox(val b: Box, val textRun: TextRun, creator: BoxWithProps) ext
     b.paint(g, null)
   }
 
-  def getInlineRenderables: Vector[InlineRenderable] = {
-    textRun.getInlineRenderables
+  def getInlineRenderables(vwProps: ViewPortProps): Vector[InlineRenderable] = {
+    textRun.getInlineRenderables(vwProps)
   }
 
-  def inlineLayout(): Unit = {
-    getInlineRenderables.foreach(inlinePseudoContext.addInlineRenderable)
+  def inlineLayout(vwProps: ViewPortProps): Unit = {
+    getInlineRenderables(vwProps).foreach(inlinePseudoContext.addInlineRenderable)
     b.contentHeight = inlinePseudoContext.getHeight
     b.contentWidth = inlinePseudoContext.getWidth
   }
@@ -632,9 +632,10 @@ class BoxWithProps(
 
   val isReplaced = (tag == "img") && (b.img != null)
 
-  def getInlineRenderables: Vector[InlineRenderable] = {
+  def getInlineRenderables(vwProps: ViewPortProps): Vector[InlineRenderable] = {
     if (tag == "img") {
       if (b.img != null) {
+        computePaddings(vwProps)
         if(!computeWidths()) {
           // use intrinsic
           b.contentWidth = b.img.getWidth
@@ -651,13 +652,13 @@ class BoxWithProps(
       // TODO: Remove this hack when pseudo elements are implemented
       Vector(InlineBreak)
     } else {
-      domChildren.flatMap {_.getInlineRenderables}
+      domChildren.flatMap {_.getInlineRenderables(vwProps)}
     }
   }
 
-  def inlineLayout(heightUpdate: Boolean): Unit = {
+  def inlineLayout(heightUpdate: Boolean, vwProps: ViewPortProps): Unit = {
     inlinePseudoContext.maxWidth = b.contentWidth
-    getInlineRenderables.foreach(inlinePseudoContext.addInlineRenderable)
+    getInlineRenderables(vwProps).foreach(inlinePseudoContext.addInlineRenderable)
     if (heightUpdate) {
       b.contentHeight = inlinePseudoContext.getHeight
     }

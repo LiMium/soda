@@ -43,7 +43,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
         }
       case aib: AnonInlineBox => {
         // println("Anon inline")
-        aib.inlineLayout()
+        aib.inlineLayout(vwProps)
         // boxP.getInlineRenderables.foreach(boxP.addInlineRenderable)
       }
       case tr: TextRun => { println("This should probably never happend") }
@@ -121,7 +121,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     if (boxP.inlineMode) {
       // println("  inline mode")
       val heightModified = boxP.computeHeights()
-      boxP.inlineLayout(!heightModified)
+      boxP.inlineLayout(!heightModified, vwProps)
     } else {
       // println("  block mode")
       blockLayout(boxP, vwProps)
