@@ -11,39 +11,6 @@ import soda.analysis.TextNode
 import soda.layout.ViewPortProps
 import java.net.URL
 
-class Sides[T](initial: => T) {
-  var top: T = initial
-  var right: T = initial
-  var bottom: T = initial
-  var left: T = initial
-
-  override def toString = s"$top;$right;$bottom;$left"
-
-  def forEach(f: (String, T) => Unit) = {
-    f("top", top)
-    f("right", right)
-    f("bottom", bottom)
-    f("left", left)
-  }
-}
-
-class SidesInt extends Sides(0) {
-  def horiz = left + right
-  def vert = top + bottom
-}
-
-case class Rect(x: Int, y: Int, width: Int, height: Int)
-
-class Border {
-  var thickness: Int = 0
-  var color: Color = null
-  var style: String = "none"
-
-  def colorDump = if (color != null) s"RGB:${color.getRed},${color.getGreen},${color.getBlue}" else "transp"
-  override def toString = if (style == "none") "[0]" else s"$thickness $style $colorDump"
-}
-
-
 sealed trait BoxTreeNode {
   def paint(g: Graphics2D): Unit
   def generateBoxes(): Unit
