@@ -415,21 +415,24 @@ class BoxWithProps(
   def containingWidth = containingBlock.b.contentWidth
   def containingHeight = containingBlock.b.contentHeight
 
+  private def resolveLength(lengthSpec: LengthSpec, parentLength: Float) = {
+    lengthSpec match {
+      case AbsLength(pxs) => pxs.toInt
+      case ParentRelLength(pct) => (pct * parentLength).toInt
+      case frl: FontRelLength => frl.compute(fontProp).toInt
+      case _ => 0
+    }
+  }
+
   def getComputedWidth = {
     size.width.specified match {
       case AutoLength => None
-      case AbsLength(pxs) => Some(pxs.toInt)
-      case ParentRelLength(pct) => Some((pct * containingWidth).toInt)
-      case frl: FontRelLength => Some(frl.compute(fontProp).toInt)
+      case x => Some(resolveLength(x, containingWidth))
     }
   }
 
   def getComputedMinWidth = {
-    size.minWidth.specified match {
-      case AbsLength(pxs) => pxs.toInt
-      case ParentRelLength(pct) => (pct * containingWidth).toInt
-      case frl: FontRelLength => frl.compute(fontProp).toInt
-    }
+    resolveLength(size.minWidth.specified, containingWidth)
   }
 
   def getComputedMargin(sideStr: String) = {
@@ -442,28 +445,19 @@ class BoxWithProps(
 
     side.specified match {
       case AutoLength => None
-      case AbsLength(pxs) => Some(pxs.toInt)
-      case ParentRelLength(pct) => Some((pct * containingWidth).toInt)
-      case frl: FontRelLength => Some(frl.compute(fontProp).toInt)
+      case x => Some(resolveLength(x, containingWidth))
     }
   }
 
   def getComputedMaxWidth = {
     size.maxWidth.specified match {
       case NoneLength => None
-      case AbsLength(pxs) => Some(pxs.toInt)
-      case ParentRelLength(pct) => Some((pct * containingWidth).toInt)
-      case frl: FontRelLength => Some(frl.compute(fontProp).toInt)
+      case x => Some(resolveLength(x, containingWidth))
     }
   }
 
   private def findRelativeOffset(factor:Int, parentLength: Float, prop: String, vwProps: ViewPortProps) = {
-    Property.getSpec(elemNode.nd, prop).map(LengthProp.parseSpec(_)). map {
-      case AbsLength(pxs) => pxs.toInt
-      case ParentRelLength(pct) => (pct * parentLength).toInt
-      case frl: FontRelLength => frl.compute(fontProp).toInt
-      case _ => 0
-    }.map(_ * factor)
+    Property.getSpec(elemNode.nd, prop).map(LengthProp.parseSpec(_)).map(resolveLength(_, parentLength)).map(_ * factor)
   }
 
   override def computeRelativeOffsets(vwProps: ViewPortProps) = {
@@ -475,12 +469,7 @@ class BoxWithProps(
   }
 
   private def getComputedPadding(ls: LengthSpec, vwProps: ViewPortProps) = {
-    ls match {
-      case AbsLength(pxs) => pxs.toInt
-      case ParentRelLength(pct) => (pct * containingWidth).toInt
-      case frl: FontRelLength => frl.compute(fontProp).toInt
-      case _ => 0
-    }
+    resolveLength(ls, containingWidth)
   }
 
   def computePaddings(vwProps: ViewPortProps) = {
@@ -493,9 +482,7 @@ class BoxWithProps(
   def computeWidths() = {
     val specWidthOpt = size.width.specified match {
       case AutoLength => if (isReplaced) None else Some(containingWidth - b.marginBoxSansContentWidth)
-      case AbsLength(pxs) => Some(pxs.toInt)
-      case ParentRelLength(pct) => Some((pct * containingWidth).toInt)
-      case frl: FontRelLength => Some(frl.compute(fontProp).toInt)
+      case x => Some(resolveLength(x, containingWidth))
     }
     specWidthOpt.foreach {specWidth =>
       b.contentWidth = specWidth
@@ -507,9 +494,7 @@ class BoxWithProps(
     lazy val containingHeight = containingBlock.b.contentHeight
     val specHeight = size.height.specified match {
       case AutoLength => None
-      case AbsLength(pxs) => Some(pxs.toInt)
-      case ParentRelLength(pct) => Some((pct * containingHeight).toInt)
-      case frl: FontRelLength => Some(frl.compute(fontProp).toInt)
+      case x => Some(resolveLength(x, containingHeight))
     }
     specHeight match {
       case Some(pxs) => b.contentHeight = pxs
