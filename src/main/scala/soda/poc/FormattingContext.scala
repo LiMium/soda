@@ -24,17 +24,9 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     }
   }
 
-  def layout(vwProps: ViewPortProps): Unit = {
-    doLayout(estBox, vwProps)
-    /*
-    estBox.domChildren.foreach(layout(_, vwProps))
-    estBox.b.contentHeight = estBox.domChildren.map{case hb: HasBox => hb.b.contentHeight case _ => 0}.sum
-    estBox.b.contentWidth = estBox.domChildren.map{case hb: HasBox => hb.b.contentWidth case _ => 0}.maxOption.getOrElse(0)
-    */
-    // layout(estBox, vwProps)
-  }
+  def layout(vwProps: ViewPortProps): Unit = { doLayout(estBox, vwProps) }
 
-  def layout(boxTN: BoxTreeNode, vwProps: ViewPortProps): Unit = {
+  private def layout(boxTN: BoxTreeNode, vwProps: ViewPortProps): Unit = {
     boxTN match {
       case boxP: BoxWithProps =>
         boxP.formattingContext match {
