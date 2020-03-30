@@ -72,7 +72,7 @@ object Layout {
       }
       val boxWithProps = new BoxWithProps(box, en, domParentBox)
       boxWithProps.domChildren = en.children.flatMap(generateBoxNode(_, boxWithProps))
-      boxWithProps.containingBlock = ContainingBlockRef(WholeArea, containingBlock)
+      boxWithProps.containingBlock = ContainingBlockRef(ContentArea, containingBlock)
       Some(boxWithProps)
     }
   }

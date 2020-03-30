@@ -413,6 +413,7 @@ class BoxWithProps(
 sealed trait ContainingAreaType
 case object WholeArea extends ContainingAreaType
 case object PaddingArea extends ContainingAreaType
+case object ContentArea extends ContainingAreaType
 
 case class ContainingBlockRef(areaType: ContainingAreaType, cb: HasBox) {
   def width = cb.b.contentWidth
