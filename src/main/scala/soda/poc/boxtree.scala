@@ -123,7 +123,7 @@ class AnonInlineBox(val b: Box, val textRun: TextRun, creator: BoxWithProps) ext
   def computeL2Props(vwProps: ViewPortProps) = {}
 }
 
-// Root box will have parentBlock == None and containingBlock == None
+// Root box will have parentBlock == None
 class BoxWithProps(
   val b: Box,
   val elemNode: ElementNode,
@@ -136,7 +136,7 @@ class BoxWithProps(
   val classAttrib = elemNode.elem.getAttribute("class")
   val debugId = "<" + tag + Option(id).map("#"+_).getOrElse("") + Option(classAttrib).map("."+_).getOrElse("") +">"
 
-  var containingBlock: HasBox = null
+  var containingBlock: ContainingBlockRef = null
   var domChildren : Vector[BoxTreeNode] = null
   var inflowChildren : Vector[BoxTreeNode] = null
 
@@ -316,8 +316,8 @@ class BoxWithProps(
     ("  " * level) + s"$debugId\n" + domChildren.map(_.dump(level + 1)).mkString("\n")
   }
 
-  def containingWidth = containingBlock.b.contentWidth
-  def containingHeight = containingBlock.b.contentHeight
+  def containingWidth = containingBlock.width
+  def containingHeight = containingBlock.height
 
   private def resolveLength(lengthSpec: LengthSpec, parentLength: Float) = {
     lengthSpec match {
@@ -395,7 +395,7 @@ class BoxWithProps(
   }
 
   def computeHeights() = {
-    lazy val containingHeight = containingBlock.b.contentHeight
+    lazy val containingHeight = containingBlock.height
     val specHeight = size.height.specified match {
       case AutoLength => None
       case x => Some(resolveLength(x, containingHeight))
@@ -408,6 +408,15 @@ class BoxWithProps(
   }
 
   override def toString = debugId
+}
+
+sealed trait ContainingAreaType
+case object WholeArea extends ContainingAreaType
+case object PaddingArea extends ContainingAreaType
+
+case class ContainingBlockRef(areaType: ContainingAreaType, cb: HasBox) {
+  def width = cb.b.contentWidth
+  def height = cb.b.contentHeight
 }
 
 class InitialContainingBlock() extends HasBox {

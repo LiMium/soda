@@ -36,7 +36,7 @@ object Layout {
   }
 
   def layoutRoot(rootBoxP: BoxWithProps, vwProps: ViewPortProps):Unit = {
-    val initCB = rootBoxP.containingBlock.b
+    val initCB = rootBoxP.containingBlock.cb.b
     initCB.contentWidth = vwProps.width
     initCB.contentHeight = vwProps.height
 
@@ -72,7 +72,7 @@ object Layout {
       }
       val boxWithProps = new BoxWithProps(box, en, domParentBox)
       boxWithProps.domChildren = en.children.flatMap(generateBoxNode(_, boxWithProps))
-      boxWithProps.containingBlock = containingBlock
+      boxWithProps.containingBlock = ContainingBlockRef(WholeArea, containingBlock)
       Some(boxWithProps)
     }
   }
