@@ -294,7 +294,7 @@ class Line {
   var currPosX = 0f
   def getMaxHeight: Float = {
     if (items.size > 0) {
-      items.map(i => i.layoutData.size.height).max
+      items.map(i => i.layoutData.size.height).max(Ordering.Float.TotalOrdering)
     } else {
       0
     }
@@ -358,7 +358,7 @@ class RBox(val properties: Properties, val parent: Option[DomRenderable]) extend
       }
     }
     val specifiedWidth = declWidth.getOrElse(avlWidth.toFloat)
-    val maxLineWidth = if (lines.isEmpty) specifiedWidth else lines.map(_.currPosX).max
+    val maxLineWidth = if (lines.isEmpty) specifiedWidth else lines.map(_.currPosX).max(Ordering.Float.TotalOrdering)
     layoutData.size.width = math.min(avlWidth, maxLineWidth).toInt
     layoutData.size.height = if (declHeight.isDefined) {
       avlHeight
