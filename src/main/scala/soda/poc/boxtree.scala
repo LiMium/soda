@@ -2,18 +2,15 @@ package soda.poc
 
 import java.awt.Graphics2D
 import java.awt.Color
-import javax.imageio.ImageIO
 import org.w3c.dom.Node
 import soda.analysis.DecoratedNode
 import soda.analysis.DocumentNode
 import soda.analysis.ElementNode
 import soda.analysis.TextNode
 import soda.layout.ViewPortProps
-import java.net.URL
 
 sealed trait BoxTreeNode {
   def paint(g: Graphics2D): Unit
-  def generateBoxes(): Unit
   def getInlineRenderables(vwProps: ViewPortProps) : Vector[InlineRenderable]
   def dump(level: Int): String
 
@@ -35,8 +32,6 @@ class TextRun(tn: TextNode, boxP: BoxWithProps ) extends BoxTreeNode {
     g.drawString(tn.text.text, 0, boxP.fontProp.size)
     */
   }
-
-  def generateBoxes(): Unit = ???
 
   private def split(s: String) = {
     val replaced = s.replaceAll("(\\s)+", " ")
@@ -68,27 +63,6 @@ case object FlexContainerBoxType extends InnerBoxType
 case object GridContainerBoxType extends InnerBoxType
 
 object Util {
-  def generateBoxElem(en: ElementNode, domParentBox: Option[BoxWithProps], containingBlock: HasBox): Option[BoxWithProps] = {
-    val displayComputed = en.displayProp.computed
-    val floatComputed = en.floatProp.computed
-    val positionComputed = en.positionProp.computed
-    if (displayComputed == Some("none")) {
-      None
-    } else {
-      val box = new Box()
-      if (en.elem.tag == "img") {
-        val src = en.elem.getAttribute("src")
-        val baseUrl = en.elem.getBaseURI()
-        val imgUrl = new URL(new URL(baseUrl), src)
-        box.img = ImageIO.read(imgUrl)
-      }
-      val boxWithProps = new BoxWithProps(box, en, domParentBox)
-      boxWithProps.generateBoxes()
-      boxWithProps.containingBlock = containingBlock
-      Some(boxWithProps)
-    }
-  }
-
   val displayOuterMap = Map(
     "none" -> "none",
     "contents" -> "contents",
@@ -128,7 +102,6 @@ object Util {
 }
 
 class AnonInlineBox(val b: Box, val textRun: TextRun, creator: BoxWithProps) extends BoxTreeNode with HasBox {
-  def generateBoxes(): Unit = ???
   def paint(g: java.awt.Graphics2D): Unit = {
     b.paint(g, null)
   }
@@ -287,10 +260,6 @@ class BoxWithProps(
     gt.dispose()
   }
 
-  def generateBoxes(): Unit = {
-    domChildren = elemNode.children.flatMap(generateBoxNode)
-  }
-
   val displayComputed = elemNode.displayProp.computed.get
   val displayOuter = Util.displayOuterMap.getOrElse(displayComputed, displayComputed)
   val displayInner = Util.displayInnerMap.getOrElse(displayComputed, displayComputed)
@@ -305,71 +274,6 @@ class BoxWithProps(
     case ab: AnonInlineBox => true
     case tr: TextRun => true
   })
-
-  /*
-  def adjustBoxes(): Unit = {
-    domChildren = if (blockLevel) {
-      ensureBlock(domChildren)
-    } else {
-      ensureInline(domChildren)
-    }
-  }
-  */
-
-  private def generateBoxNode(dn: DecoratedNode): Option[BoxTreeNode] = {
-    dn match {
-      case en: ElementNode => Util.generateBoxElem(en, Some(this), this)
-      case tn: TextNode => {
-        val textRun = new TextRun(tn, this)
-        if (innerBoxType == InlineBoxType) {
-          Some(textRun)
-        } else {
-          Some(new AnonInlineBox(new Box(), textRun, this))
-        }
-      }
-      case _ => ???
-    }
-  }
-
-  /*
-  private def ensureBlock(childBoxes: Vector[BoxTreeNode]) : Vector[BoxTreeNode] = {
-    var blocked = Vector[BoxTreeNode]()
-    childBoxes.foreach {cb =>
-      cb match {
-        case boxWithProps : BoxWithProps => {
-          if (boxWithProps.blockLevel) {
-            blocked :+= boxWithProps
-          } else {
-            // TODO: combine adjacent inline boxes
-            val anonBox = new Box()
-            blocked :+= new BoxWithProps(anonBox, None, None, None)
-          }
-        }
-        case _ =>
-      }
-    }
-    blocked
-  }
-
-  private def ensureInline(childBoxes: Vector[BoxTreeNode]) : Vector[BoxTreeNode] = {
-    var blocked = Vector[BoxTreeNode]()
-    childBoxes.foreach { cb =>
-      cb match {
-        case boxWithProps : BoxWithProps => {
-          if (boxWithProps.blockLevel) {
-            blocked :+= cb
-          } else {
-            // TODO: combine adjacent inline boxes
-            val anonBox = new Box()
-            blocked :+= new BoxWithProps(anonBox, None, None, None)
-          }
-        }
-        case _ =>
-      }
-    }
-    blocked
-  }
-  */
 
   val isReplaced = (tag == "img") && (b.img != null)
 
