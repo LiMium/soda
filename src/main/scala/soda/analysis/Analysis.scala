@@ -1,5 +1,6 @@
 package soda.analysis
 
+import scala.language.existentials
 import scala.collection.mutable.ArrayDeque
 import cz.vutbr.web.css.StyleSheet
 import cz.vutbr.web.domassign.Analyzer.Holder
@@ -18,7 +19,7 @@ import soda.poc._
 import java.awt.Color
 
 object Analysis {
-  
+
   def getStyleSheets(dom: RenderableDocument, userCSS: String, url: URL) = {
     // TODO: br is supposed to be an inline element
     // val cssNorm = "head {display: none} body, div, p { display: block; margin:1em } body {color: #000000; background: #ffffff} br {display:block}"
