@@ -14,17 +14,19 @@ sealed trait HasBox {
 }
 
 sealed trait HasAbsChildren {
-  var absChildren: Vector[BoxTreeNode] = Vector()
+  def getAbsChildren: Vector[BoxTreeNode]
+  def appendAbsChild(c: BoxTreeNode): Unit
 }
 
 sealed trait BoxTreeNode {
   var isInflow = true
+  var containingBlock: ContainingBlockRef = null
 
   var domChildren : Vector[BoxTreeNode] = null
   var inflowChildren : Vector[BoxTreeNode] = Vector.empty
 
   def paint(g: Graphics2D): Unit
-  def getInlineRenderables(vwProps: ViewPortProps) : Vector[InlineRenderable]
+  def getInlineRenderables(vwProps: ViewPortProps) : Vector[Either[InlineRenderable, BoxTreeNode]]
   def dump(level: Int): String
 
   def computeL2Props(vwProps: ViewPortProps):Unit
@@ -53,9 +55,9 @@ class TextRun(tn: TextNode, boxP: BoxWithProps ) extends BoxTreeNode {
     all.toList
   }
 
-  def getInlineRenderables(vwProps: ViewPortProps) : Vector[InlineRenderable] = {
+  def getInlineRenderables(vwProps: ViewPortProps) : Vector[Either[InlineRenderable, BoxTreeNode]] = {
     val words = split(tn.text.text)
-    words.map(new InlineWordRenderable(_, boxP.b.visibility, boxP.colorProp, boxP.fontProp)).toVector
+    words.map(w => Left(new InlineWordRenderable(w, boxP.b.visibility, boxP.colorProp, boxP.fontProp))).toVector
   }
 
   def dump(level: Int): String = {
@@ -72,6 +74,28 @@ case object FlexContainerBoxType extends InnerBoxType
 case object GridContainerBoxType extends InnerBoxType
 
 object Util {
+  def findCascadingOffsetY(boxP: BoxWithProps, cbRef: ContainingBlockRef, yOffset: Int):Int = {
+    // println("Finding cascading y offset with ", boxP, yOffset, boxP.b.offsetY)
+    val offsetY = yOffset + boxP.b.contentOffsetY
+    if (boxP.b eq cbRef.cb.b) {
+      offsetY
+    } else {
+      boxP.domParentBox.map(pb => findCascadingOffsetY(pb, cbRef, boxP.b.offsetY + offsetY)).getOrElse(offsetY)
+    }
+  }
+
+  def findCascadingOffsetX(boxP: BoxWithProps, cbRef: ContainingBlockRef, xOffset: Int):Int = {
+    // println("Finding cascading x offset with ", boxP, xOffset, boxP.b.offsetX)
+    val offsetX = xOffset + boxP.b.contentOffsetX
+    if (boxP.b eq cbRef.cb.b) {
+      offsetX
+    } else {
+      boxP.domParentBox.map(pb => findCascadingOffsetX(pb, cbRef, boxP.b.offsetX + offsetX)).getOrElse(offsetX)
+    }
+  }
+
+
+
   val displayOuterMap = Map(
     "none" -> "none",
     "contents" -> "contents",
@@ -115,12 +139,15 @@ class AnonInlineBox(val b: Box, val textRun: TextRun, creator: BoxWithProps) ext
     b.paint(g, null)
   }
 
-  def getInlineRenderables(vwProps: ViewPortProps): Vector[InlineRenderable] = {
+  def getInlineRenderables(vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
     textRun.getInlineRenderables(vwProps)
   }
 
   def inlineLayout(vwProps: ViewPortProps): Unit = {
-    getInlineRenderables(vwProps).foreach(inlinePseudoContext.addInlineRenderable)
+    getInlineRenderables(vwProps).foreach({
+      case Left(ir) => inlinePseudoContext.addInlineRenderable(ir)
+      case Right(_) =>
+    })
     b.contentHeight = inlinePseudoContext.getHeight
     b.contentWidth = inlinePseudoContext.getWidth
   }
@@ -138,6 +165,11 @@ class BoxWithProps(
   val elemNode: ElementNode,
   val domParentBox: Option[BoxWithProps]
   ) extends BoxTreeNode with HasBox with HasAbsChildren {
+  private var absChildren: Vector[BoxTreeNode] = Vector()
+  def getAbsChildren: Vector[BoxTreeNode] = absChildren
+  def appendAbsChild(c: BoxTreeNode): Unit = {
+    absChildren :+= c
+  }
 
   val tag = elemNode.elem.tag
 
@@ -145,9 +177,10 @@ class BoxWithProps(
   val classAttrib = elemNode.elem.getAttribute("class")
   val debugId = "<" + tag + Option(id).map("#"+_).getOrElse("") + Option(classAttrib).map("."+_).getOrElse("") +">"
 
-  var containingBlock: ContainingBlockRef = null
   val isRootElem = elemNode.elem.isRootElem
   val positionProp = elemNode.positionProp.get
+
+  val isReplaced = (tag == "img") && (b.img != null)
 
   lazy val createsBFC = {
     val floatProp = elemNode.floatProp.get
@@ -157,7 +190,11 @@ class BoxWithProps(
 
   // formatting context established by this box
   var formattingContext: Option[FormattingContext] = if (isRootElem || createsBFC) {
+    if (isReplaced) {
+    Some(new SimpleReplacedFormattingContext(this))
+    } else {
     Some(new BlockFormattingContext(this))
+    }
   } else {
     None
   }
@@ -241,6 +278,7 @@ class BoxWithProps(
   }
 
   def paint(g: Graphics2D): Unit = {
+    // println("Painting, ", debugId)
     val gt = g.create().asInstanceOf[Graphics2D]
     gt.translate(b.offsetX + b.renderOffsetX, b.offsetY + b.renderOffsetY)
 
@@ -254,12 +292,17 @@ class BoxWithProps(
     val clipBoundHeight = if (b.overflowX == "hidden" || b.overflowX == "scroll") b.contentHeight else currClipBounds.height
     gtc.clipRect(currClipBounds.x, currClipBounds.y, clipBoundWidth, clipBoundHeight)
 
-    if (inlineMode) {
-      inlinePseudoContext.paint(gtc)
+    if (isReplaced && positionProp == "absolute") {
+      // println("Directly painting box")
+      // b.paint(gtc, bgColor)
     } else {
-      inflowChildren.foreach(_.paint(gtc))
+      if (inlineMode) {
+        inlinePseudoContext.paint(gtc)
+      } else {
+        inflowChildren.foreach(_.paint(gtc))
+      }
+      absChildren.foreach(_.paint(gt))
     }
-    absChildren.foreach(_.paint(gtc))
 
     gtc.dispose()
     gt.dispose()
@@ -280,9 +323,7 @@ class BoxWithProps(
     case tr: TextRun => true
   })
 
-  val isReplaced = (tag == "img") && (b.img != null)
-
-  def getInlineRenderables(vwProps: ViewPortProps): Vector[InlineRenderable] = {
+  def getInlineRenderables(vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
     if (tag == "img") {
       if (b.img != null) {
         computePaddings(vwProps)
@@ -294,21 +335,40 @@ class BoxWithProps(
           // use intrinsic
           b.contentHeight = b.img.getHeight
         }
-        Vector(new InlineElemRenderable(b))
+        Vector(Left(new InlineElemRenderable(b)))
       } else {
         Vector.empty
       }
     } else if (tag == "br") {
       // TODO: Remove this hack when pseudo elements are implemented
-      Vector(InlineBreak)
+      Vector(Left(InlineBreak))
     } else {
-      inflowChildren.flatMap {_.getInlineRenderables(vwProps)}
+      // inflowChildren.flatMap {_.getInlineRenderables(vwProps)}
+      domChildren.flatMap (dc => {
+        if (dc.isInflow) {
+          dc.getInlineRenderables(vwProps)
+        } else {
+          Vector(Right(dc))
+        }
+      })
+
     }
   }
 
   def inlineLayout(heightUpdate: Boolean, vwProps: ViewPortProps): Unit = {
+    // println("Doing inline layout in ", debugId, b.offsetY)
     inlinePseudoContext.maxWidth = b.contentWidth
-    getInlineRenderables(vwProps).foreach(inlinePseudoContext.addInlineRenderable)
+    getInlineRenderables(vwProps).foreach({
+      case Left(ir) => inlinePseudoContext.addInlineRenderable(ir)
+      case Right(outOfFlow) => outOfFlow match {
+        case boxP: BoxWithProps =>
+          val cascadingOffsetY = Util.findCascadingOffsetY(this, boxP.containingBlock, inlinePseudoContext.currPos)
+          val cascadingOffsetX = Util.findCascadingOffsetX(this, boxP.containingBlock, 0)
+          boxP.b.offsetY = cascadingOffsetY
+          boxP.b.offsetX = cascadingOffsetX
+        case _ => ???
+      }
+    })
     if (heightUpdate) {
       b.contentHeight = inlinePseudoContext.getHeight
     }
@@ -426,15 +486,18 @@ case class ContainingBlockRef(areaType: ContainingAreaType, cb: HasBox) {
 
   def addAsAbsoluteChild(btn: BoxTreeNode):Unit = {
     cb match {
-      case b:HasAbsChildren => b.absChildren :+= btn
+      case b:HasAbsChildren => b.appendAbsChild(btn)
       case _ => println("TODO: Handle adding abs child to unknown node")
     }
   }
 }
 
-class InitialContainingBlock() extends HasBox {
+class InitialContainingBlock() extends HasBox with HasAbsChildren {
   val b: Box = new Box()
-  def initBox(vwProps: ViewPortProps) = {
-    b.contentWidth = vwProps.width
+  private var rootBox: BoxWithProps = null
+  def setRootBox(box: BoxWithProps) = {
+    rootBox = box
   }
+  def appendAbsChild(c: BoxTreeNode): Unit = {rootBox.appendAbsChild(c)}
+  def getAbsChildren: Vector[BoxTreeNode] = rootBox.getAbsChildren
 }

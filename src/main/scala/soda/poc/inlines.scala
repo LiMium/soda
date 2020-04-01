@@ -20,7 +20,6 @@ object InlineBreak extends InlineRenderable {
 }
 
 class InlineElemRenderable(val box: Box) extends InlineRenderable {
-  // override def toString = "box width: " + boxO.contentWidth
   override def toString = s"box est: $estWidth x $estHeight"
   def paint(g: Graphics2D): Unit = {
     val gt = g.create(box.offsetX, box.offsetY, box.marginBoxWidth, box.marginBoxHeight).asInstanceOf[Graphics2D]

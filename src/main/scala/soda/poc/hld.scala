@@ -32,7 +32,11 @@ object Layout {
   def generateBoxes(dn: DocumentNode): Option[BoxWithProps] = {
     val rootElem = dn.childElements.find(_.elem.isRootElem).get
     val initialCB = new InitialContainingBlock()
-    generateBoxElem(rootElem, None, ContainingBlockRef(ContentArea, initialCB))
+    val rootBoxOpt = generateBoxElem(rootElem, None, ContainingBlockRef(ContentArea, initialCB))
+    rootBoxOpt.foreach {rootBox =>
+      initialCB.setRootBox(rootBox)
+    }
+    rootBoxOpt
   }
 
   def layoutRoot(rootBoxP: BoxWithProps, vwProps: ViewPortProps):Unit = {
@@ -48,11 +52,11 @@ object Layout {
   def separateAbsAndFixed(boxP: BoxTreeNode):Unit = {
     if (boxP.domChildren != null) {
       val (inflow, abs) = boxP.domChildren.partition( {
-        case childBoxP: BoxWithProps => childBoxP.positionProp != "absolute"
+        case childBoxP: BoxWithProps => ! absolutish.contains(childBoxP.positionProp)
         case _ => true
       })
       boxP.inflowChildren = inflow
-      abs.foreach(a => a match {
+      abs.foreach({
         case childBoxP: BoxWithProps => childBoxP.isInflow = false; childBoxP.containingBlock.addAsAbsoluteChild(childBoxP)
         case _ => ???
       })
@@ -80,15 +84,36 @@ object Layout {
         box.img = ImageIO.read(imgUrl)
       }
       val boxWithProps = new BoxWithProps(box, en, domParentBox)
-      boxWithProps.domChildren = en.children.flatMap(generateBoxNode(_, boxWithProps))
       boxWithProps.containingBlock = containingBlock
+      boxWithProps.domChildren = en.children.flatMap(generateBoxNode(_, boxWithProps))
       Some(boxWithProps)
     }
   }
 
-  private def findContainingBlock(parentBox: BoxWithProps) : ContainingBlockRef = {
+  val absolutish = Array("absolute", "fixed")
+  val nonStatic = absolutish :+ "relative"
+
+  private def findContainingBlock(positionProp: String, parentBox: BoxWithProps) : ContainingBlockRef = {
+    if (positionProp == "absolute") {
+      findAbsContainingBlock(parentBox)
+    } else if (positionProp == "fixed") {
+      // ContainingBlockRef(PaddingArea, findRootBox(parentBox))
+      findRootBox(parentBox).containingBlock
+    } else {
+      ContainingBlockRef(ContentArea, parentBox)
+    }
+  }
+
+  private def findRootBox(box: BoxWithProps): BoxWithProps = {
+    box.domParentBox match {
+      case Some(pb) => findRootBox(pb)
+      case None => box
+    }
+  }
+
+  private def findAbsContainingBlock(parentBox: BoxWithProps) : ContainingBlockRef = {
     val parentPos = parentBox.positionProp
-    if (parentBox.domParentBox.isEmpty || parentPos == "absolute" || parentPos == "relative" || parentPos == "fixed") {
+    if (parentBox.domParentBox.isEmpty || nonStatic.contains(parentPos)) {
       ContainingBlockRef(PaddingArea, parentBox)
     } else {
       ContainingBlockRef(PaddingArea, parentBox.domParentBox.get)
@@ -98,7 +123,8 @@ object Layout {
   private def generateBoxNode(dn: DecoratedNode, parentBox: BoxWithProps): Option[BoxTreeNode] = {
     dn match {
       case en: ElementNode => {
-        val containingBlock = if (en.positionProp.get == Some("absolute")) findContainingBlock(parentBox) else ContainingBlockRef(ContentArea, parentBox)
+        // val containingBlock = if (absolutish.contains(en.positionProp.get)) findContainingBlock(parentBox) else ContainingBlockRef(ContentArea, parentBox)
+        val containingBlock = findContainingBlock(en.positionProp.get, parentBox)
         generateBoxElem(en, Some(parentBox), containingBlock)
       }
       case tn: TextNode => {

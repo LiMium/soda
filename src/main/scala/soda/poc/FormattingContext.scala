@@ -12,6 +12,18 @@ sealed trait FormattingContext {
   def getFlowBoxType(displayOuter: String): InnerBoxType = BlockContainerBoxType
 }
 
+final class SimpleReplacedFormattingContext(estBox: BoxWithProps) extends FormattingContext {
+  def layout(vwProps: ViewPortProps): Unit = {
+    if (estBox.b.img != null) {
+      estBox.b.contentWidth = estBox.b.img.getWidth()
+      estBox.b.contentHeight = estBox.b.img.getHeight()
+    }
+
+  }
+
+  override def getFlowBoxType(displayOuter: String): InnerBoxType = {BlockContainerBoxType}
+}
+
 
 final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingContext {
 
@@ -110,12 +122,10 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
 
     // println("In : " + boxP.debugId)
     if (boxP.inlineMode) {
-      // println("  inline mode")
       val heightModified = boxP.computeHeights()
       boxP.inlineLayout(!heightModified, vwProps)
-      absLayout(boxP, 0, vwProps)
+      absLayout(boxP, vwProps)
     } else {
-      // println("  block mode")
       blockLayout(boxP, vwProps)
     }
   }
@@ -127,24 +137,26 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     // var maxWidth = 0
     boxP.domChildren.foreach{c =>
       if (c.isInflow) {
-        layout(c, vwProps)
         c match {
           case hb: HasBox => {
             hb.b.offsetY = yPos
-            hb.b.offsetX = 0
+          }
+          case x => println("Probably shouldn't happen: " + x)
+        }
+
+        layout(c, vwProps)
+
+        c match {
+          case hb: HasBox => {
             yPos += hb.b.marginBoxHeight
-            /*
-            if (hb.b.contentWidth > maxWidth) {
-              maxWidth = hb.b.contentWidth
-            }*/
           }
           case x => println("Probably shouldn't happen: " + x)
         }
       } else {
         c match {
           case hb: HasBox => {
-            hb.b.offsetY = yPos
-            hb.b.offsetX = 0
+            hb.b.offsetY = Util.findCascadingOffsetY(boxP, c.containingBlock, yPos)
+            hb.b.offsetX = Util.findCascadingOffsetX(boxP, c.containingBlock, 0)
           }
           case _ => ???
         }
@@ -159,13 +171,13 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     }
     boxP.b.contentHeight = math.max(specHeight, yPos)
 
-    absLayout(boxP, yPos, vwProps)
+    absLayout(boxP, vwProps)
   }
 
-  private def absLayout(btn: BoxTreeNode, posY: Int, vwProps: ViewPortProps): Unit = {
+  private def absLayout(btn: BoxTreeNode, vwProps: ViewPortProps): Unit = {
     btn match {
       case hac: HasAbsChildren =>
-        hac.absChildren.foreach {c =>
+        hac.getAbsChildren.foreach {c =>
           layout(c, vwProps)
         }
       case _ =>
