@@ -6,7 +6,6 @@ import soda.analysis.TextNode
 import soda.layout.ViewPortProps
 
 sealed trait FormattingContext {
-  var establishingBox: BoxWithProps = null
   // def generateBoxes(): Unit
   def layout(vwProps: ViewPortProps): Unit
 
