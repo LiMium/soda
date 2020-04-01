@@ -114,6 +114,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
       // println("  inline mode")
       val heightModified = boxP.computeHeights()
       boxP.inlineLayout(!heightModified, vwProps)
+      absLayout(boxP, 0, vwProps)
     } else {
       // println("  block mode")
       blockLayout(boxP, vwProps)
@@ -127,18 +128,28 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     val parentOffsetY = boxP.b.contentOffsetY
     // var maxWidth = 0
     boxP.domChildren.foreach{c =>
-      layout(c, vwProps)
-      c match {
-        case hb: HasBox => {
-          hb.b.offsetY = yPos
-          hb.b.offsetX = 0
-          yPos += hb.b.marginBoxHeight
-          /*
-          if (hb.b.contentWidth > maxWidth) {
-            maxWidth = hb.b.contentWidth
-          }*/
+      if (c.isInflow) {
+        layout(c, vwProps)
+        c match {
+          case hb: HasBox => {
+            hb.b.offsetY = yPos
+            hb.b.offsetX = 0
+            yPos += hb.b.marginBoxHeight
+            /*
+            if (hb.b.contentWidth > maxWidth) {
+              maxWidth = hb.b.contentWidth
+            }*/
+          }
+          case x => println("Probably shouldn't happen: " + x)
         }
-        case x => println("Probably shouldn't happen: " + x)
+      } else {
+        c match {
+          case hb: HasBox => {
+            hb.b.offsetY = yPos
+            hb.b.offsetX = 0
+          }
+          case _ => ???
+        }
       }
     }
     val specHeight = boxP.size.height.specified match {
@@ -149,6 +160,18 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
       case _ => ???
     }
     boxP.b.contentHeight = math.max(specHeight, yPos)
+
+    absLayout(boxP, yPos, vwProps)
+  }
+
+  private def absLayout(btn: BoxTreeNode, posY: Int, vwProps: ViewPortProps): Unit = {
+    btn match {
+      case hac: HasAbsChildren =>
+        hac.absChildren.foreach {c =>
+          layout(c, vwProps)
+        }
+      case _ =>
+    }
   }
 }
 

@@ -9,17 +9,26 @@ import soda.analysis.ElementNode
 import soda.analysis.TextNode
 import soda.layout.ViewPortProps
 
+sealed trait HasBox {
+  val b: Box
+}
+
+sealed trait HasAbsChildren {
+  var absChildren: Vector[BoxTreeNode] = Vector()
+}
+
 sealed trait BoxTreeNode {
+  var isInflow = true
+
+  var domChildren : Vector[BoxTreeNode] = null
+  var inflowChildren : Vector[BoxTreeNode] = Vector.empty
+
   def paint(g: Graphics2D): Unit
   def getInlineRenderables(vwProps: ViewPortProps) : Vector[InlineRenderable]
   def dump(level: Int): String
 
   def computeL2Props(vwProps: ViewPortProps):Unit
   def computeRelativeOffsets(vwProps: ViewPortProps): Unit = {}
-}
-
-sealed trait HasBox {
-  val b: Box
 }
 
 class TextRun(tn: TextNode, boxP: BoxWithProps ) extends BoxTreeNode {
@@ -128,7 +137,7 @@ class BoxWithProps(
   val b: Box,
   val elemNode: ElementNode,
   val domParentBox: Option[BoxWithProps]
-  ) extends BoxTreeNode with HasBox {
+  ) extends BoxTreeNode with HasBox with HasAbsChildren {
 
   val tag = elemNode.elem.tag
 
@@ -137,9 +146,6 @@ class BoxWithProps(
   val debugId = "<" + tag + Option(id).map("#"+_).getOrElse("") + Option(classAttrib).map("."+_).getOrElse("") +">"
 
   var containingBlock: ContainingBlockRef = null
-  var domChildren : Vector[BoxTreeNode] = null
-  var inflowChildren : Vector[BoxTreeNode] = null
-
   val isRootElem = elemNode.elem.isRootElem
   val positionProp = elemNode.positionProp.get
 
@@ -217,9 +223,6 @@ class BoxWithProps(
     b.overflowX = Property.getSpec(nd, "overflow-x").getOrElse("visible")
     b.overflowY = Property.getSpec(nd, "overflow-y").getOrElse("visible")
 
-  // }
-
-  // def computeSelfL3Props(parent: DecoratedNode) = {
     size.init(nd)
   }
 
@@ -254,8 +257,9 @@ class BoxWithProps(
     if (inlineMode) {
       inlinePseudoContext.paint(gtc)
     } else {
-      domChildren.foreach(_.paint(gtc))
+      inflowChildren.foreach(_.paint(gtc))
     }
+    absChildren.foreach(_.paint(gtc))
 
     gtc.dispose()
     gt.dispose()
@@ -270,7 +274,7 @@ class BoxWithProps(
     applicableFormattingContext.getFlowBoxType(displayOuter)
   }
 
-  lazy val inlineMode = domChildren.forall( {
+  lazy val inlineMode = inflowChildren.forall( {
     case boxP: BoxWithProps => boxP.displayOuter == "inline" || boxP.displayOuter == "run-in"
     case ab: AnonInlineBox => true
     case tr: TextRun => true
@@ -298,7 +302,7 @@ class BoxWithProps(
       // TODO: Remove this hack when pseudo elements are implemented
       Vector(InlineBreak)
     } else {
-      domChildren.flatMap {_.getInlineRenderables(vwProps)}
+      inflowChildren.flatMap {_.getInlineRenderables(vwProps)}
     }
   }
 
@@ -370,7 +374,7 @@ class BoxWithProps(
       b.renderOffsetY = findRelativeOffset(1, containingHeight, "top", vwProps).orElse(findRelativeOffset(-1, containingHeight, "bottom", vwProps)).getOrElse(0)
       b.renderOffsetX = findRelativeOffset(1, containingWidth, "left", vwProps).orElse(findRelativeOffset(-1, containingWidth, "right", vwProps)).getOrElse(0)
     }
-    domChildren.foreach {_.computeRelativeOffsets(vwProps)}
+    inflowChildren.foreach {_.computeRelativeOffsets(vwProps)}
   }
 
   private def getComputedPadding(ls: LengthSpec, vwProps: ViewPortProps) = {
@@ -419,6 +423,13 @@ case object ContentArea extends ContainingAreaType
 case class ContainingBlockRef(areaType: ContainingAreaType, cb: HasBox) {
   def width = cb.b.contentWidth
   def height = cb.b.contentHeight
+
+  def addAsAbsoluteChild(btn: BoxTreeNode):Unit = {
+    cb match {
+      case b:HasAbsChildren => b.absChildren :+= btn
+      case _ => println("TODO: Handle adding abs child to unknown node")
+    }
+  }
 }
 
 class InitialContainingBlock() extends HasBox {
