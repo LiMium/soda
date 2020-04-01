@@ -229,6 +229,7 @@ object Analyser {
         dn.children = rdoc.children.map(c => analyse(c, classifiedRules, None)).toVector
         dn
       }
+      case _ => ???
     }
   }
 

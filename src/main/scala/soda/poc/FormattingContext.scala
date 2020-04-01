@@ -146,6 +146,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
       case AbsLength(pxs) => pxs.toInt
       case frl: FontRelLength => (frl.compute(boxP.fontProp)).toInt
       case ParentRelLength(prl) => (prl * boxP.b.contentHeight).toInt
+      case _ => ???
     }
     boxP.b.contentHeight = math.max(specHeight, yPos)
   }

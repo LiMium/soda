@@ -201,6 +201,7 @@ trait ContainerRenderable extends DomRenderable {
         }
 
       case _: RenderableDocument => ???
+      case _ => ???
     }
   }
 

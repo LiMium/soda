@@ -201,6 +201,7 @@ class BoxWithProps(
       case MediumLength => vwProps.borderSizeMedium
       case ThinLength => vwProps.borderSizeThin
       case ThickLength => vwProps.borderSizeThick
+      case _ => ???
     }
   }
 
