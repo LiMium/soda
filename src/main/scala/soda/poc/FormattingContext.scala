@@ -125,7 +125,6 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
 
   private def blockLayout(boxP: BoxWithProps, vwProps: ViewPortProps): Unit = {
     var yPos = 0
-    val parentOffsetY = boxP.b.contentOffsetY
     // var maxWidth = 0
     boxP.domChildren.foreach{c =>
       if (c.isInflow) {
@@ -178,7 +177,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
 
 class TableFormattingContext() extends FormattingContext {
   // def generateBoxes(): Unit = ???
-  
+
   def layout(vwProps: ViewPortProps) = ???
 }
 
