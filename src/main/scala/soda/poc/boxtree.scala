@@ -9,6 +9,8 @@ import soda.analysis.ElementNode
 import soda.analysis.TextNode
 import soda.layout.ViewPortProps
 
+sealed trait BasicNode
+
 sealed trait HasBox {
   val b: Box
 }
@@ -18,12 +20,19 @@ sealed trait HasAbsChildren {
   def appendAbsChild(c: BoxTreeNode): Unit
 }
 
-sealed trait BoxTreeNode {
+sealed trait InlineSource {
+  def isInflow: Boolean
+  def initProps(vwProps: ViewPortProps):Unit
+  def getInlineRenderables(vwProps: ViewPortProps) : Vector[Either[InlineRenderable, BoxTreeNode]]
+}
+
+sealed trait BoxTreeNode extends HasBox with BasicNode {
   var isInflow = true
   var containingBlock: ContainingBlockRef = null
 
-  var domChildren : Vector[BoxTreeNode] = null
-  var inflowChildren : Vector[BoxTreeNode] = Vector.empty
+  var boxyDomChildren : Vector[BoxTreeNode] = null
+  def boxyInflowChildren : Vector[BoxTreeNode] = if (boxyDomChildren != null) boxyDomChildren.filter(_.isInflow) else Vector.empty
+  var inlinyDomChildren : Vector[InlineSource] = null
 
   def paint(g: Graphics2D): Unit
   def getInlineRenderables(vwProps: ViewPortProps) : Vector[Either[InlineRenderable, BoxTreeNode]]
@@ -33,16 +42,11 @@ sealed trait BoxTreeNode {
   def computeRelativeOffsets(vwProps: ViewPortProps): Unit = {}
 }
 
-class TextRun(tn: TextNode, boxP: BoxWithProps ) extends BoxTreeNode {
-  override def toString = tn.text.text
+class TextRun(tn: TextNode, boxP: BoxWithProps ) extends InlineSource with BasicNode {
+  val isInflow = true
 
-  def paint(g: Graphics2D): Unit = {
-    /* TODO: Shouldn't come here
-    g.setColor(boxP.colorProp.computed)
-    g.setFont(boxP.fontProp.font)
-    g.drawString(tn.text.text, 0, boxP.fontProp.size)
-    */
-  }
+  override def toString = tn.text.text
+  def initProps(vwProps: ViewPortProps):Unit = {}
 
   private def split(s: String) = {
     val replaced = s.replaceAll("(\\s)+", " ")
@@ -134,7 +138,10 @@ object Util {
 
 }
 
-class AnonInlineBox(val b: Box, val textRun: TextRun, creator: BoxWithProps) extends BoxTreeNode with HasBox {
+class AnonInlineBox(val textRun: TextRun, creator: BoxWithProps) extends InlineSource with BoxTreeNode {
+  val b: Box = new Box
+  def initProps(vwProps: ViewPortProps):Unit = {}
+
   def paint(g: java.awt.Graphics2D): Unit = {
     b.paint(g, null)
   }
@@ -164,7 +171,7 @@ class BoxWithProps(
   val b: Box,
   val elemNode: ElementNode,
   val domParentBox: Option[BoxWithProps]
-  ) extends BoxTreeNode with HasBox with HasAbsChildren {
+  ) extends BoxTreeNode with HasAbsChildren with InlineSource {
   private var absChildren: Vector[BoxTreeNode] = Vector()
   def getAbsChildren: Vector[BoxTreeNode] = absChildren
   def appendAbsChild(c: BoxTreeNode): Unit = {
@@ -274,7 +281,13 @@ class BoxWithProps(
 
   def computeL2Props(vwProps: ViewPortProps):Unit = {
     computeSelfL2Props(vwProps)
-    domChildren.foreach(_.computeL2Props(vwProps))
+    if (boxyDomChildren != null) {
+      boxyDomChildren.foreach(_.computeL2Props(vwProps))
+    }
+  }
+
+  def initProps(vwProps: ViewPortProps):Unit = {
+    computeL2Props(vwProps)
   }
 
   def paint(g: Graphics2D): Unit = {
@@ -299,7 +312,7 @@ class BoxWithProps(
       if (inlineMode) {
         inlinePseudoContext.paint(gtc)
       } else {
-        inflowChildren.foreach(_.paint(gtc))
+        boxyInflowChildren.foreach(_.paint(gtc))
       }
       absChildren.foreach(_.paint(gt))
     }
@@ -315,13 +328,18 @@ class BoxWithProps(
   val blockLevel = displayOuter == "block"
   val innerBoxType = if (displayInner == "flow" || displayInner == "flow-root") {
     applicableFormattingContext.getFlowBoxType(displayOuter)
+  } else {
+    InlineBoxType
   }
 
-  lazy val inlineMode = inflowChildren.forall( {
+  /*
+  lazy val inlineMode = boxyInflowChildren.forall( {
     case boxP: BoxWithProps => boxP.displayOuter == "inline" || boxP.displayOuter == "run-in"
     case ab: AnonInlineBox => true
     case tr: TextRun => true
   })
+  */
+  lazy val inlineMode = inlinyDomChildren != null
 
   def getInlineRenderables(vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
     if (tag == "img") {
@@ -344,14 +362,22 @@ class BoxWithProps(
       Vector(Left(InlineBreak))
     } else {
       // inflowChildren.flatMap {_.getInlineRenderables(vwProps)}
-      domChildren.flatMap (dc => {
-        if (dc.isInflow) {
-          dc.getInlineRenderables(vwProps)
-        } else {
-          Vector(Right(dc))
-        }
-      })
-
+      if (inlinyDomChildren != null) {
+        inlinyDomChildren.flatMap (dc => {
+          if (dc.isInflow) {
+            dc.initProps(vwProps)
+            dc.getInlineRenderables(vwProps)
+          } else {
+            dc match {
+              case bp: BoxWithProps => Vector(Right(bp))
+              case _ => ???
+            }
+          }
+        })
+      } else {
+        boxyDomChildren.flatMap(_.getInlineRenderables(vwProps))
+        // Vector.empty
+      }
     }
   }
 
@@ -362,6 +388,7 @@ class BoxWithProps(
       case Left(ir) => inlinePseudoContext.addInlineRenderable(ir)
       case Right(outOfFlow) => outOfFlow match {
         case boxP: BoxWithProps =>
+        // println("Setting offset of inline out of flow", boxP)
           val cascadingOffsetY = Util.findCascadingOffsetY(this, boxP.containingBlock, inlinePseudoContext.currPos)
           val cascadingOffsetX = Util.findCascadingOffsetX(this, boxP.containingBlock, 0)
           boxP.b.offsetY = cascadingOffsetY
@@ -378,7 +405,7 @@ class BoxWithProps(
   val inlinePseudoContext = new InlinePseudoContext()
 
   def dump(level: Int): String = {
-    ("  " * level) + s"$debugId\n" + domChildren.map(_.dump(level + 1)).mkString("\n")
+    ("  " * level) + s"$debugId\n" + boxyDomChildren.map(_.dump(level + 1)).mkString("\n")
   }
 
   def containingWidth = containingBlock.width
@@ -434,7 +461,7 @@ class BoxWithProps(
       b.renderOffsetY = findRelativeOffset(1, containingHeight, "top", vwProps).orElse(findRelativeOffset(-1, containingHeight, "bottom", vwProps)).getOrElse(0)
       b.renderOffsetX = findRelativeOffset(1, containingWidth, "left", vwProps).orElse(findRelativeOffset(-1, containingWidth, "right", vwProps)).getOrElse(0)
     }
-    inflowChildren.foreach {_.computeRelativeOffsets(vwProps)}
+    boxyInflowChildren.foreach {_.computeRelativeOffsets(vwProps)}
   }
 
   private def getComputedPadding(ls: LengthSpec, vwProps: ViewPortProps) = {
@@ -492,7 +519,7 @@ case class ContainingBlockRef(areaType: ContainingAreaType, cb: HasBox) {
   }
 }
 
-class InitialContainingBlock() extends HasBox with HasAbsChildren {
+class InitialContainingBlock extends HasBox with HasAbsChildren {
   val b: Box = new Box()
   private var rootBox: BoxWithProps = null
   def setRootBox(box: BoxWithProps) = {

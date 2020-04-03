@@ -18,7 +18,6 @@ final class SimpleReplacedFormattingContext(estBox: BoxWithProps) extends Format
       estBox.b.contentWidth = estBox.b.img.getWidth()
       estBox.b.contentHeight = estBox.b.img.getHeight()
     }
-
   }
 
   override def getFlowBoxType(displayOuter: String): InnerBoxType = {BlockContainerBoxType}
@@ -45,12 +44,8 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
           case _ => doLayout(boxP, vwProps)
         }
       case aib: AnonInlineBox => {
-        // println("Anon inline")
         aib.inlineLayout(vwProps)
-        // boxP.getInlineRenderables.foreach(boxP.addInlineRenderable)
       }
-      case tr: TextRun => { println("This should probably never happend") }
-      case x => println(x); ???
     }
   }
 
@@ -122,10 +117,12 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
 
     // println("In : " + boxP.debugId)
     if (boxP.inlineMode) {
+      // println("Starting inline layout of ", boxP)
       val heightModified = boxP.computeHeights()
       boxP.inlineLayout(!heightModified, vwProps)
       absLayout(boxP, vwProps)
     } else {
+      // println("Starting block layout of ", boxP)
       blockLayout(boxP, vwProps)
     }
   }
@@ -135,7 +132,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
   private def blockLayout(boxP: BoxWithProps, vwProps: ViewPortProps): Unit = {
     var yPos = 0
     // var maxWidth = 0
-    boxP.domChildren.foreach{c =>
+    boxP.boxyDomChildren.foreach{c =>
       if (c.isInflow) {
         c match {
           case hb: HasBox => {
@@ -178,6 +175,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     btn match {
       case hac: HasAbsChildren =>
         hac.getAbsChildren.foreach {c =>
+          c.computeL2Props(vwProps)
           layout(c, vwProps)
         }
       case _ =>

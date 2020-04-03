@@ -49,18 +49,24 @@ object Layout {
     rootBoxP.computeRelativeOffsets(vwProps)
   }
 
-  def separateAbsAndFixed(boxP: BoxTreeNode):Unit = {
-    if (boxP.domChildren != null) {
-      val (inflow, abs) = boxP.domChildren.partition( {
-        case childBoxP: BoxWithProps => ! absolutish.contains(childBoxP.positionProp)
-        case _ => true
-      })
-      boxP.inflowChildren = inflow
-      abs.foreach({
-        case childBoxP: BoxWithProps => childBoxP.isInflow = false; childBoxP.containingBlock.addAsAbsoluteChild(childBoxP)
-        case _ => ???
-      })
-      boxP.domChildren.foreach {separateAbsAndFixed(_)}
+  def separateAbsAndFixed(btn: BoxTreeNode):Unit = {
+    if (btn.boxyDomChildren != null) {
+      val boxy = btn.boxyDomChildren.collect( { case b:BoxWithProps => b })
+      val abs = boxy.filter(c => absolutish.contains(c.positionProp))
+      abs.foreach { childBoxP =>
+        childBoxP.isInflow = false
+        childBoxP.containingBlock.addAsAbsoluteChild(childBoxP)
+      }
+      btn.boxyDomChildren.foreach {separateAbsAndFixed(_)}
+    }
+    if (btn.inlinyDomChildren != null) {
+      val boxy = btn.inlinyDomChildren.collect( { case b:BoxWithProps => b })
+      val abs = boxy.filter(c => absolutish.contains(c.positionProp))
+      abs.foreach { childBoxP =>
+        childBoxP.isInflow = false;
+        childBoxP.containingBlock.addAsAbsoluteChild(childBoxP)
+      }
+      boxy.foreach (separateAbsAndFixed)
     }
   }
 
@@ -85,7 +91,21 @@ object Layout {
       }
       val boxWithProps = new BoxWithProps(box, en, domParentBox)
       boxWithProps.containingBlock = containingBlock
-      boxWithProps.domChildren = en.children.flatMap(generateBoxNode(_, boxWithProps))
+      val children = en.children.flatMap(generateBoxNode(_, boxWithProps))
+
+      val inlineMode = children.forall( {
+        case boxP: BoxWithProps => absolutish.contains(boxP.positionProp) || (boxP.displayOuter == "inline" || boxP.displayOuter == "run-in")
+        case ab: AnonInlineBox => true
+        case tr: TextRun => true
+      })
+      if (inlineMode) {
+        boxWithProps.inlinyDomChildren = children.map(_.asInstanceOf[InlineSource])
+      } else {
+        boxWithProps.boxyDomChildren = children.map({
+          case btn: BoxTreeNode => btn
+          case tRun: TextRun => new AnonInlineBox(tRun, boxWithProps)
+        })
+      }
       Some(boxWithProps)
     }
   }
@@ -120,7 +140,7 @@ object Layout {
     }
   }
 
-  private def generateBoxNode(dn: DecoratedNode, parentBox: BoxWithProps): Option[BoxTreeNode] = {
+  private def generateBoxNode(dn: DecoratedNode, parentBox: BoxWithProps): Option[BasicNode] = {
     dn match {
       case en: ElementNode => {
         // val containingBlock = if (absolutish.contains(en.positionProp.get)) findContainingBlock(parentBox) else ContainingBlockRef(ContentArea, parentBox)
@@ -132,7 +152,7 @@ object Layout {
         if (parentBox.innerBoxType == InlineBoxType) {
           Some(textRun)
         } else {
-          Some(new AnonInlineBox(new Box(), textRun, parentBox))
+          Some(new AnonInlineBox(textRun, parentBox))
         }
       }
       case _ => ???
