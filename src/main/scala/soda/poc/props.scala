@@ -120,6 +120,8 @@ object ColorProp {
       new Color(r, g, b)
     } else if (colorStr == "transparent") {
       new Color(0x00000000, true)
+    } else if (colorStr == "currentColor") {
+      initial
     } else {
       println("Unhandled: " + colorStr)
       initial
