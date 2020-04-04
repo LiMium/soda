@@ -80,6 +80,11 @@ class Box {
   def marginBoxSansContentHeight = marginHeight + borderHeight + paddingHeight
 
   def paint(g: Graphics2D, bgColor: Color): Unit = {
+    if (config.showBoxes) {
+      g.setColor(Color.MAGENTA)
+      g.drawRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
+    }
+
     if (visibility) {
       // g.setColor(backgroundColor.actual.get)
       // val borderWidth = border.left.actual.get + border.right.actual.get
