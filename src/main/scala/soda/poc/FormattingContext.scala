@@ -79,41 +79,49 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
         if (compMarginLeft.isDefined) {
           // overconstrained, marginRight has to absorb the difference
           val rem = avlWidth - (width + borderPaddingWidth + compMarginLeft.get)
-          (width, compMarginLeft.get, rem)
+          (false, width, compMarginLeft.get, rem)
         } else if (compMarginRight.isDefined) {
           val rem = avlWidth - (width + borderPaddingWidth + compMarginRight.get)
-          (width, rem, compMarginRight.get)
+          (false, width, rem, compMarginRight.get)
         } else {
           val rem = avlWidth - (width + borderPaddingWidth)
           val remBy2 = rem/2
-          (width, remBy2, rem - remBy2)
+          (false, width, remBy2, rem - remBy2)
         }
       }
 
-      val (usedWidth, marginLeft, marginRight) = compWidth match {
-        case Some(absComputedWidth) => {
-          val (width, _) = constrainWidth(absComputedWidth)
-          computeWhenWidthSpecified(width)
-        }
-        case None => {
-          // Width is auto
-          val marginLeftElseZero = compMarginLeft.getOrElse(0)
-          val marginRightElseZero = compMarginRight.getOrElse(0)
-          val avlWidthModuloMargins = avlWidth - (marginLeftElseZero + marginRightElseZero + borderPaddingWidth)
-          val (width, notAuto) = constrainWidth(avlWidthModuloMargins)
-          if (notAuto) {
+      val (shrinkToFit, usedWidth, marginLeft, marginRight) = if (boxP.displayOuter == "inline" && boxP.displayInner == "flow-root") {
+        // As per section 10.3.9 of CSS 2.2
+        // TODO: width should be shrink to fit, when it has computed value of auto. But that will have to be handled during layout
+        (compWidth.isEmpty, compWidth.getOrElse(avlWidth), compMarginLeft.getOrElse(0), compMarginRight.getOrElse(0))
+      } else {
+        compWidth match {
+          case Some(absComputedWidth) => {
+            val (width, _) = constrainWidth(absComputedWidth)
             computeWhenWidthSpecified(width)
-          } else {
-            (width, marginLeftElseZero, marginRightElseZero)
+          }
+          case None => {
+            // Width is auto
+            val marginLeftElseZero = compMarginLeft.getOrElse(0)
+            val marginRightElseZero = compMarginRight.getOrElse(0)
+            val avlWidthModuloMargins = avlWidth - (marginLeftElseZero + marginRightElseZero + borderPaddingWidth)
+            val (width, notAuto) = constrainWidth(avlWidthModuloMargins)
+            if (notAuto) {
+              computeWhenWidthSpecified(width)
+            } else {
+              (false, width, marginLeftElseZero, marginRightElseZero)
+            }
           }
         }
       }
       boxP.b.contentWidth = usedWidth
+      boxP.b.shrinkToFit = shrinkToFit
       boxP.b.marginThickness.left = marginLeft
       boxP.b.marginThickness.right = marginRight
       boxP.b.marginThickness.top = onlyPositive(compMarginTop.getOrElse(0))
       boxP.b.marginThickness.bottom = onlyPositive(compMarginBottom.getOrElse(0))
       // println(boxP.debugId + "  margin thickness: " + boxP.b.marginThickness)
+      // println(boxP.debugId + "  padding thickness: " + boxP.b.paddingThickness)
       // println("  content width: " + usedWidth)
       // println("  border thickness: " + boxP.b.border)
     }

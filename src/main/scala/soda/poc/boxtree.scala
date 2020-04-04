@@ -192,9 +192,13 @@ class BoxWithProps(
 
   val isReplaced = (tag == "img") && (b.img != null)
 
+  val displayComputed = elemNode.displayProp.computed.get
+  val displayOuter = Util.displayOuterMap.getOrElse(displayComputed, displayComputed)
+  val displayInner = Util.displayInnerMap.getOrElse(displayComputed, displayComputed)
+
   lazy val createsBFC = {
     val floatProp = elemNode.floatProp.get
-    floatProp == "left" || floatProp == "right" || positionProp == "absolute" || positionProp == "fixed"
+    floatProp == "left" || floatProp == "right" || positionProp == "absolute" || positionProp == "fixed" || displayInner == "flow-root"
     // TODO: Add more conditions
   }
 
@@ -287,6 +291,12 @@ class BoxWithProps(
     if (boxyDomChildren != null) {
       boxyDomChildren.foreach(_.computeL2Props(vwProps))
     }
+    if (inlinyDomChildren != null) {
+      inlinyDomChildren.foreach {
+        case bwp : BoxWithProps => bwp.computeL2Props(vwProps)
+        case _ =>
+      }
+    }
   }
 
   def initProps(vwProps: ViewPortProps):Unit = {
@@ -323,10 +333,6 @@ class BoxWithProps(
     gtc.dispose()
     gt.dispose()
   }
-
-  val displayComputed = elemNode.displayProp.computed.get
-  val displayOuter = Util.displayOuterMap.getOrElse(displayComputed, displayComputed)
-  val displayInner = Util.displayInnerMap.getOrElse(displayComputed, displayComputed)
 
   val blockLevel = displayOuter == "block"
   val innerBoxType = if (displayInner == "flow" || displayInner == "flow-root") {
@@ -368,8 +374,19 @@ class BoxWithProps(
       if (inlinyDomChildren != null) {
         inlinyDomChildren.flatMap (dc => {
           if (dc.isInflow) {
-            dc.initProps(vwProps)
-            dc.getInlineRenderables(vwProps)
+            dc match {
+              case bwp: BoxWithProps =>
+                if (bwp.displayInner == "flow-root") {
+                  bwp.formattingContext.foreach(fc => fc.layout(vwProps))
+                  Vector(Left(new FlowRootInlineRenderable(bwp)))
+                } else {
+                  dc.initProps(vwProps)
+                  dc.getInlineRenderables(vwProps)
+                }
+              case _ =>
+                dc.initProps(vwProps)
+                dc.getInlineRenderables(vwProps)
+            }
           } else {
             dc match {
               case bp: BoxWithProps => Vector(Right(bp))
@@ -401,6 +418,9 @@ class BoxWithProps(
     })
     if (heightUpdate) {
       b.contentHeight = inlinePseudoContext.getHeight
+    }
+    if (b.shrinkToFit) {
+      b.contentWidth = math.min(inlinePseudoContext.getWidth, b.contentWidth)
     }
     // b.contentWidth = inlinePseudoContext.getWidth
   }

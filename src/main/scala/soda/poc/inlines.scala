@@ -4,8 +4,8 @@ import java.awt.Graphics2D
 
 trait InlineRenderable {
   def paint(g: Graphics2D): Unit
-  val estWidth: Int
-  val estHeight: Int
+  def estWidth: Int
+  def estHeight: Int
   val box: Box
   val isBreak: Boolean
   val isSpace: Boolean = false
@@ -30,6 +30,27 @@ class InlineElemRenderable(val box: Box) extends InlineRenderable {
 
   val estWidth = box.marginBoxWidth
   val estHeight = box.marginBoxHeight
+}
+
+class FlowRootInlineRenderable(btn: BoxTreeNode) extends InlineRenderable {
+  override def toString = s"flow root inline est: $estWidth x $estHeight"
+
+  def estWidth: Int = btn.b.marginBoxWidth
+
+  def estHeight: Int = btn.b.marginBoxHeight
+
+  val box: Box = new Box()
+
+  val isBreak: Boolean = false
+
+  def paint(g: Graphics2D): Unit = {
+    val gt = g.create(box.offsetX + box.renderOffsetX, box.offsetY + box.renderOffsetY, btn.b.marginBoxWidth, btn.b.marginBoxHeight).asInstanceOf[Graphics2D]
+    // gt.setColor(Color.CYAN)
+    // gt.fillRect(0, 0, btn.b.marginBoxWidth, btn.b.marginBoxHeight)
+    btn.paint(gt)
+    gt.dispose()
+  }
+
 }
 
 class InlineWordRenderable(word: String, visibility: Boolean, colorProp: ColorProp, fontProp: FontProp) extends InlineRenderable {

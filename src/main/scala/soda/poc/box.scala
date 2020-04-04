@@ -56,6 +56,7 @@ class Box {
   var renderOffsetY = 0
 
   var contentWidth = 0
+  var shrinkToFit = false
   var contentHeight = 0
   var visibility: Boolean = true
   var overflowX: String = "visible"
