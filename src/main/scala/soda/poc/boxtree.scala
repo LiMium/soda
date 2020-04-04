@@ -24,6 +24,7 @@ sealed trait InlineSource {
   def isInflow: Boolean
   def initProps(vwProps: ViewPortProps):Unit
   def getInlineRenderables(vwProps: ViewPortProps) : Vector[Either[InlineRenderable, BoxTreeNode]]
+  def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit
 }
 
 sealed trait BoxTreeNode extends HasBox with BasicNode {
@@ -68,6 +69,7 @@ class TextRun(tn: TextNode, boxP: BoxWithProps ) extends InlineSource with Basic
     "  " * level + "Text: '" + toString + "'"
   }
   def computeL2Props(vwProps: ViewPortProps) = {}
+  def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit = {}
 }
 
 sealed trait InnerBoxType
@@ -164,6 +166,7 @@ class AnonInlineBox(val textRun: TextRun, creator: BoxWithProps) extends InlineS
     ("  " * level) + "Anon inline\n" + textRun.dump(level + 1)
   }
   def computeL2Props(vwProps: ViewPortProps) = {}
+  def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit = { }
 }
 
 // Root box will have parentBlock == None
@@ -462,6 +465,9 @@ class BoxWithProps(
       b.renderOffsetX = findRelativeOffset(1, containingWidth, "left", vwProps).orElse(findRelativeOffset(-1, containingWidth, "right", vwProps)).getOrElse(0)
     }
     boxyInflowChildren.foreach {_.computeRelativeOffsets(vwProps)}
+    if (inlinyDomChildren != null) {
+      inlinyDomChildren.foreach {_.computeRelativeOffsetsOfBoxes(vwProps)}
+    }
   }
 
   private def getComputedPadding(ls: LengthSpec, vwProps: ViewPortProps) = {
@@ -497,6 +503,10 @@ class BoxWithProps(
       case None =>
     }
     specHeight.isDefined
+  }
+
+  def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit = {
+    computeRelativeOffsets(vwProps)
   }
 
   override def toString = debugId
