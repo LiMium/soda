@@ -117,12 +117,12 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
 
     // println("In : " + boxP.debugId)
     if (boxP.inlineMode) {
-      // println("Starting inline layout of ", boxP)
+      if(config.layoutDebugLevel > 0) println(s"Starting inline layout of $boxP")
       val heightModified = boxP.computeHeights()
       boxP.inlineLayout(!heightModified, vwProps)
       absLayout(boxP, vwProps)
     } else {
-      // println("Starting block layout of ", boxP)
+      if(config.layoutDebugLevel > 0) println(s"Starting block layout of $boxP")
       blockLayout(boxP, vwProps)
     }
   }
