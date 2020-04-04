@@ -39,7 +39,7 @@ class InlineWordRenderable(word: String, visibility: Boolean, colorProp: ColorPr
     if (visibility) {
       g.setColor(colorProp.computed)
       g.setFont(fontProp.font)
-      g.drawString(word, box.offsetX, box.offsetY + fontProp.size)
+      g.drawString(word, box.offsetX, box.offsetY + fontProp.ascent)
     }
   }
 

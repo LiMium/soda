@@ -242,6 +242,7 @@ class FontProp {
   var font: Font = null
   var fontMetrics: FontMetrics = null
   var exHeight = 0
+  var ascent = 0
 
   def init(nd: NodeData, pFontProp: Option[FontProp], vwProps: ViewPortProps) = {
     val computedSize = Property.getSpec(nd, "font-size") match {
@@ -308,6 +309,7 @@ class FontProp {
       val glyphVector = font.createGlyphVector(fontMetrics.getFontRenderContext(), "xuwz")
       (glyphVector.getVisualBounds.getHeight).toInt
     }
+    ascent = fontMetrics.getAscent()
   }
 
   def emHeight = size
