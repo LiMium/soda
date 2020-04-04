@@ -34,7 +34,10 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     }
   }
 
-  def layout(vwProps: ViewPortProps): Unit = { doLayout(estBox, vwProps) }
+  def layout(vwProps: ViewPortProps): Unit = {
+    if (config.layoutDebugLevel > 0) println(s"Starting BFC layout from $estBox")
+    doLayout(estBox, vwProps)
+  }
 
   private def layout(boxTN: BoxTreeNode, vwProps: ViewPortProps): Unit = {
     boxTN match {

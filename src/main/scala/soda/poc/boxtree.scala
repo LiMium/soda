@@ -294,7 +294,7 @@ class BoxWithProps(
   }
 
   def paint(g: Graphics2D): Unit = {
-    // println("Painting, ", debugId)
+    if (config.paintDebugLevel > 0) println("Painting, ", debugId)
     val gt = g.create().asInstanceOf[Graphics2D]
     gt.translate(b.offsetX + b.renderOffsetX, b.offsetY + b.renderOffsetY)
 
