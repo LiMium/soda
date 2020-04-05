@@ -103,7 +103,7 @@ object Layout {
       } else {
         boxWithProps.boxyDomChildren = children.map({
           case btn: BoxTreeNode => btn
-          case tRun: TextRun => new AnonInlineBox(tRun, boxWithProps)
+          case tRun: TextRun => new AnonInlineBox(tRun, boxWithProps) // TODO: It should be AnonBlockBox instead
         })
       }
       Some(boxWithProps)
