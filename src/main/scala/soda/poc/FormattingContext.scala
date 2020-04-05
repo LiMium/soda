@@ -23,7 +23,6 @@ final class SimpleReplacedFormattingContext(estBox: BoxWithProps) extends Format
   override def getFlowBoxType(displayOuter: String): InnerBoxType = {BlockContainerBoxType}
 }
 
-
 final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingContext {
 
   override def getFlowBoxType(displayOuter: String): InnerBoxType = {
@@ -47,10 +46,18 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
           case _ => doLayout(boxP, vwProps)
         }
       case aib: AnonInlineBox => {
-        aib.inlineLayout(vwProps)
+        inlineLayoutAIB(aib, vwProps)
       }
     }
   }
+
+  private def inlineLayoutAIB(aib: AnonInlineBox, vwProps: ViewPortProps): Unit = {
+    aib.inlinePseudoContext.maxWidth = aib.creator.b.contentWidth
+    getSimpleInlineRenderables(aib.textRun, vwProps).foreach(aib.inlinePseudoContext.addInlineRenderable)
+    aib.b.contentHeight = aib.inlinePseudoContext.getHeight
+    aib.b.contentWidth = aib.inlinePseudoContext.getWidth
+  }
+
 
   private def doLayout(boxP: BoxWithProps, vwProps: ViewPortProps): Unit = {
     boxP.computePaddings(vwProps)
@@ -130,13 +137,120 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     if (boxP.inlineMode) {
       if(config.layoutDebugLevel > 0) println(s"Starting inline layout of $boxP")
       val heightModified = boxP.computeHeights()
-      boxP.inlineLayout(!heightModified, vwProps)
+      inlineLayout(boxP, !heightModified, vwProps)
       absLayout(boxP, vwProps)
     } else {
       if(config.layoutDebugLevel > 0) println(s"Starting block layout of $boxP")
       blockLayout(boxP, vwProps)
     }
   }
+
+  private def inlineLayout(boxP: BoxWithProps, heightUpdate: Boolean, vwProps: ViewPortProps): Unit = {
+    // println("Doing inline layout in ", debugId, b.offsetY)
+    val ipc = boxP.inlinePseudoContext
+    val b = boxP.b
+
+    ipc.maxWidth = b.contentWidth
+    getInlineRenderables(boxP, vwProps).foreach({
+      case Left(ir) => ipc.addInlineRenderable(ir)
+      case Right(outOfFlow) => outOfFlow match {
+        case oboxP: BoxWithProps =>
+          // println("Setting offset of inline out of flow", boxP)
+          val cascadingOffsetY = Util.findCascadingOffsetY(boxP, oboxP.containingBlock, ipc.currPos)
+          val cascadingOffsetX = Util.findCascadingOffsetX(boxP, oboxP.containingBlock, 0)
+          oboxP.b.offsetY = cascadingOffsetY
+          oboxP.b.offsetX = cascadingOffsetX
+        case _ => ???
+      }
+    })
+    if (heightUpdate) {
+      b.contentHeight = ipc.getHeight
+    }
+    if (b.shrinkToFit) {
+      b.contentWidth = math.min(ipc.getWidth, b.contentWidth)
+    }
+    // b.contentWidth = inlinePseudoContext.getWidth
+  }
+
+  def getInlineRenderables(boxP: BoxWithProps, vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
+    if (boxP.tag == "img") {
+      if (boxP.b.img != null) {
+        boxP.computePaddings(vwProps)
+        if(!boxP.computeWidths()) {
+          // use intrinsic
+          boxP.b.contentWidth = boxP.b.img.getWidth
+        }
+        if(!boxP.computeHeights()) {
+          // use intrinsic
+          boxP.b.contentHeight = boxP.b.img.getHeight
+        }
+        Vector(Left(new InlineElemRenderable(boxP.b)))
+      } else {
+        Vector.empty
+      }
+    } else if (boxP.tag == "br") {
+      // TODO: Remove this hack when pseudo elements are implemented
+      Vector(Left(InlineBreak))
+    } else {
+      // inflowChildren.flatMap {_.getInlineRenderables(vwProps)}
+      if (boxP.inlinyDomChildren != null) {
+        boxP.inlinyDomChildren.flatMap (dc => {
+          if (dc.isInflow) {
+            dc match {
+              case bwp: BoxWithProps =>
+                if (bwp.displayInner == "flow-root") {
+                  bwp.formattingContext.foreach(fc => fc.layout(vwProps))
+                  Vector(Left(new FlowRootInlineRenderable(bwp)))
+                } else {
+                  dc.initProps(vwProps)
+                  getAllInlineRenderables(dc, vwProps)
+                }
+              case _ =>
+                dc.initProps(vwProps)
+                getAllInlineRenderables(dc, vwProps)
+            }
+          } else {
+            dc match {
+              case bp: BoxWithProps => Vector(Right(bp))
+              case _ => ???
+            }
+          }
+        })
+      } else {
+        boxP.boxyDomChildren.flatMap(getAllInlineRenderables(_, vwProps))
+      }
+    }
+  }
+
+  def getAllInlineRenderables(btn: BoxTreeNode, vwProps: ViewPortProps) = {
+    btn match {
+      case tr: TextRun => getInlineRenderables(tr, vwProps)
+      case bwp: BoxWithProps => getInlineRenderables(bwp, vwProps)
+      case aib: AnonInlineBox => getInlineRenderables(aib, vwProps)
+    }
+  }
+
+  def getAllInlineRenderables(ir: InlineSource, vwProps: ViewPortProps) = {
+    ir match {
+      case tr: TextRun => getInlineRenderables(tr, vwProps)
+      case bwp: BoxWithProps => getInlineRenderables(bwp, vwProps)
+      case aib: AnonInlineBox => getInlineRenderables(aib, vwProps)
+    }
+  }
+
+  private def getSimpleInlineRenderables(tr: TextRun, vwProps: ViewPortProps) : Vector[InlineRenderable] = {
+    val words = tr.getWords
+    words.map(w => new InlineWordRenderable(w, tr.boxP.b.visibility, tr.boxP.colorProp, tr.boxP.fontProp)).toVector
+  }
+
+  private def getInlineRenderables(tr: TextRun, vwProps: ViewPortProps) : Vector[Either[InlineRenderable, BoxTreeNode]] = {
+    getSimpleInlineRenderables(tr, vwProps).map(Left(_))
+  }
+
+  private def getInlineRenderables(aib: AnonInlineBox, vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
+    getInlineRenderables(aib.textRun, vwProps)
+  }
+
 
   private def onlyPositive(x: Int) = if (x >= 0) x else 0
 
