@@ -50,7 +50,7 @@ object Layout {
   }
 
   def separateAbsAndFixed(btn: BoxTreeNode):Unit = {
-    if (btn.boxyDomChildren != null) {
+    {
       val boxy = btn.boxyDomChildren.collect( { case b:BoxWithProps => b })
       val abs = boxy.filter(c => absolutish.contains(c.positionProp))
       abs.foreach { childBoxP =>

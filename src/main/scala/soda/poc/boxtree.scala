@@ -31,8 +31,8 @@ sealed trait BoxTreeNode extends HasBox with BasicNode {
   var isInflow = true
   var containingBlock: ContainingBlockRef = null
 
-  var boxyDomChildren : Vector[BoxTreeNode] = null
-  def boxyInflowChildren : Vector[BoxTreeNode] = if (boxyDomChildren != null) boxyDomChildren.filter(_.isInflow) else Vector.empty
+  var boxyDomChildren : Vector[BoxTreeNode] = Vector.empty
+  def boxyInflowChildren : Vector[BoxTreeNode] = boxyDomChildren.filter(_.isInflow)
   var inlinyDomChildren : Vector[InlineSource] = null
 
   def paint(g: Graphics2D): Unit
@@ -290,9 +290,7 @@ class BoxWithProps(
 
   def computeL2Props(vwProps: ViewPortProps):Unit = {
     computeSelfL2Props(vwProps)
-    if (boxyDomChildren != null) {
-      boxyDomChildren.foreach(_.computeL2Props(vwProps))
-    }
+    boxyDomChildren.foreach(_.computeL2Props(vwProps))
     if (inlinyDomChildren != null) {
       inlinyDomChildren.foreach {
         case bwp : BoxWithProps => bwp.computeL2Props(vwProps)
