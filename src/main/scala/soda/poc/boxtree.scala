@@ -146,6 +146,7 @@ class AnonInlineBox(val textRun: TextRun, creator: BoxWithProps) extends InlineS
 
   def paint(g: java.awt.Graphics2D): Unit = {
     b.paint(g, null)
+    inlinePseudoContext.paint(g)
   }
 
   def getInlineRenderables(vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
@@ -153,6 +154,7 @@ class AnonInlineBox(val textRun: TextRun, creator: BoxWithProps) extends InlineS
   }
 
   def inlineLayout(vwProps: ViewPortProps): Unit = {
+    inlinePseudoContext.maxWidth = creator.b.contentWidth
     getInlineRenderables(vwProps).foreach({
       case Left(ir) => inlinePseudoContext.addInlineRenderable(ir)
       case Right(_) =>
