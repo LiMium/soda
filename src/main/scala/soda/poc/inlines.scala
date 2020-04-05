@@ -117,6 +117,8 @@ class InlinePseudoContext {
   }
 
   def addInlineRenderable(ir: InlineRenderable) = {
+    if (config.layoutDebugLevel > 2) println(s"Adding ir $ir")
+
     if (ir.isBreak) {
       startNewLine()
     } else {

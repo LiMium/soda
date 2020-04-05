@@ -96,7 +96,6 @@ class Box {
         g.fillRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
       }
 
-      // Paint left border
       val borderRect = Rect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
       paintBorder(g, borderRect)
 
@@ -110,7 +109,7 @@ class Box {
   }
 
   private def paintBorder(g: Graphics2D, br: Rect) = {
-    // println("Painting border: " + br + " with thickness: " + borderThickness + " color: " + borderColor)
+    if (config.paintDebugLevel > 2) println(s"Painting border: $br")
     paintBorderHoriz(g, border.top.color, border.top.style, br.x, br.y, br.width, border.top.thickness)
     paintBorderHoriz(g, border.bottom.color, border.bottom.style, br.x, br.y+br.height - border.bottom.thickness, br.width, border.bottom.thickness)
 

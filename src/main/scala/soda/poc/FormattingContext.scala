@@ -144,6 +144,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     var yPos = 0
     // var maxWidth = 0
     boxP.boxyDomChildren.foreach{c =>
+      if(config.layoutDebugLevel > 1) println(s"  layout of $c")
       if (c.isInflow) {
         c match {
           case hb: HasBox => {
