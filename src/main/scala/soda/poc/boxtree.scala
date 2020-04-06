@@ -41,10 +41,15 @@ sealed trait BoxTreeNode extends HasBox with BasicNode {
   def computeRelativeOffsets(vwProps: ViewPortProps): Unit = {}
 }
 
-class TextRun(tn: TextNode, val boxP: BoxWithProps ) extends InlineSource with BasicNode {
-  val isInflow = true
+sealed trait InnerBoxType
+case object InlineBoxType extends InnerBoxType
+case object TableWrapperBoxType extends InnerBoxType
+case object BlockContainerBoxType extends InnerBoxType
+case object FlexContainerBoxType extends InnerBoxType
+case object GridContainerBoxType extends InnerBoxType
 
-  override def toString = tn.text.text
+class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends InlineSource with BoxTreeNode {
+  val b: Box = new Box
   def initProps(vwProps: ViewPortProps):Unit = {}
 
   private def split(s: String) = {
@@ -60,24 +65,6 @@ class TextRun(tn: TextNode, val boxP: BoxWithProps ) extends InlineSource with B
 
   def getWords = split(tn.text.text)
 
-  def dump(level: Int): String = {
-    "  " * level + "Text: '" + toString + "'"
-  }
-  def computeL2Props(vwProps: ViewPortProps) = {}
-  def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit = {}
-}
-
-sealed trait InnerBoxType
-case object InlineBoxType extends InnerBoxType
-case object TableWrapperBoxType extends InnerBoxType
-case object BlockContainerBoxType extends InnerBoxType
-case object FlexContainerBoxType extends InnerBoxType
-case object GridContainerBoxType extends InnerBoxType
-
-class AnonInlineBox(val textRun: TextRun, val creator: BoxWithProps) extends InlineSource with BoxTreeNode {
-  val b: Box = new Box
-  def initProps(vwProps: ViewPortProps):Unit = {}
-
   def paint(g: java.awt.Graphics2D): Unit = {
     b.paint(g, null)
     inlinePseudoContext.paint(g)
@@ -85,7 +72,7 @@ class AnonInlineBox(val textRun: TextRun, val creator: BoxWithProps) extends Inl
 
   val inlinePseudoContext = new InlinePseudoContext()
   def dump(level: Int): String = {
-    ("  " * level) + "Anon inline\n" + textRun.dump(level + 1)
+    ("  " * level) + "Anon:\n" + tn
   }
   def computeL2Props(vwProps: ViewPortProps) = {}
   def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit = { }

@@ -95,16 +95,12 @@ object Layout {
 
       val inlineMode = children.forall( {
         case boxP: BoxWithProps => absolutish.contains(boxP.positionProp) || (boxP.displayOuter == "inline" || boxP.displayOuter == "run-in")
-        case ab: AnonInlineBox => true
-        case tr: TextRun => true
+        case ab: AnonBox => true
       })
       if (inlineMode) {
         boxWithProps.inlinyDomChildren = children.map(_.asInstanceOf[InlineSource])
       } else {
-        boxWithProps.boxyDomChildren = children.map({
-          case btn: BoxTreeNode => btn
-          case tRun: TextRun => new AnonInlineBox(tRun, boxWithProps) // TODO: It should be AnonBlockBox instead
-        })
+        boxWithProps.boxyDomChildren = children.map({case btn: BoxTreeNode => btn })
       }
       Some(boxWithProps)
     }
@@ -148,12 +144,7 @@ object Layout {
         generateBoxElem(en, Some(parentBox), containingBlock)
       }
       case tn: TextNode => {
-        val textRun = new TextRun(tn, parentBox)
-        if (parentBox.innerBoxType == InlineBoxType) {
-          Some(textRun)
-        } else {
-          Some(new AnonInlineBox(textRun, parentBox))
-        }
+        Some(new AnonBox(tn, parentBox))
       }
       case _ => ???
     }

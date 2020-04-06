@@ -45,17 +45,17 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
           case Some(fc) => fc.layout(vwProps)
           case _ => doLayout(boxP, vwProps)
         }
-      case aib: AnonInlineBox => {
-        inlineLayoutAIB(aib, vwProps)
+      case ab: AnonBox => {
+        inlineLayoutAIB(ab, vwProps)
       }
     }
   }
 
-  private def inlineLayoutAIB(aib: AnonInlineBox, vwProps: ViewPortProps): Unit = {
-    aib.inlinePseudoContext.maxWidth = aib.creator.b.contentWidth
-    getSimpleInlineRenderables(aib.textRun, vwProps).foreach(aib.inlinePseudoContext.addInlineRenderable)
-    aib.b.contentHeight = aib.inlinePseudoContext.getHeight
-    aib.b.contentWidth = aib.inlinePseudoContext.getWidth
+  private def inlineLayoutAIB(ab: AnonBox, vwProps: ViewPortProps): Unit = {
+    ab.inlinePseudoContext.maxWidth = ab.creator.b.contentWidth
+    getSimpleInlineRenderables(ab, vwProps).foreach(ab.inlinePseudoContext.addInlineRenderable)
+    ab.b.contentHeight = ab.inlinePseudoContext.getHeight
+    ab.b.contentWidth = ab.inlinePseudoContext.getWidth
   }
 
 
@@ -224,31 +224,25 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
 
   def getAllInlineRenderables(btn: BoxTreeNode, vwProps: ViewPortProps) = {
     btn match {
-      case tr: TextRun => getInlineRenderables(tr, vwProps)
       case bwp: BoxWithProps => getInlineRenderables(bwp, vwProps)
-      case aib: AnonInlineBox => getInlineRenderables(aib, vwProps)
+      case ab: AnonBox => getInlineRenderables(ab, vwProps)
     }
   }
 
   def getAllInlineRenderables(ir: InlineSource, vwProps: ViewPortProps) = {
     ir match {
-      case tr: TextRun => getInlineRenderables(tr, vwProps)
       case bwp: BoxWithProps => getInlineRenderables(bwp, vwProps)
-      case aib: AnonInlineBox => getInlineRenderables(aib, vwProps)
+      case ab: AnonBox => getInlineRenderables(ab, vwProps)
     }
   }
 
-  private def getSimpleInlineRenderables(tr: TextRun, vwProps: ViewPortProps) : Vector[InlineRenderable] = {
-    val words = tr.getWords
-    words.map(w => new InlineWordRenderable(w, tr.boxP.b.visibility, tr.boxP.colorProp, tr.boxP.fontProp)).toVector
+  private def getSimpleInlineRenderables(ab: AnonBox, vwProps: ViewPortProps) : Vector[InlineRenderable] = {
+    val words = ab.getWords
+    words.map(w => new InlineWordRenderable(w, ab.creator.b.visibility, ab.creator.colorProp, ab.creator.fontProp)).toVector
   }
 
-  private def getInlineRenderables(tr: TextRun, vwProps: ViewPortProps) : Vector[Either[InlineRenderable, BoxTreeNode]] = {
-    getSimpleInlineRenderables(tr, vwProps).map(Left(_))
-  }
-
-  private def getInlineRenderables(aib: AnonInlineBox, vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
-    getInlineRenderables(aib.textRun, vwProps)
+  private def getInlineRenderables(ab: AnonBox, vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
+    getSimpleInlineRenderables(ab, vwProps).map(Left(_))
   }
 
 
