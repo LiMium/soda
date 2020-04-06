@@ -138,11 +138,11 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
       if(config.layoutDebugLevel > 0) println(s"Starting inline layout of $boxP")
       val heightModified = boxP.computeHeights()
       inlineLayout(boxP, !heightModified, vwProps)
-      absLayout(boxP, vwProps)
     } else {
       if(config.layoutDebugLevel > 0) println(s"Starting block layout of $boxP")
       blockLayout(boxP, vwProps)
     }
+    absLayout(boxP, vwProps)
   }
 
   private def inlineLayout(boxP: BoxWithProps, heightUpdate: Boolean, vwProps: ViewPortProps): Unit = {
@@ -293,8 +293,6 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
       case _ => ???
     }
     boxP.b.contentHeight = math.max(specHeight, yPos)
-
-    absLayout(boxP, vwProps)
   }
 
   private def absLayout(btn: BoxTreeNode, vwProps: ViewPortProps): Unit = {
