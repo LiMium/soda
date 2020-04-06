@@ -153,15 +153,12 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     ipc.maxWidth = b.contentWidth
     getInlineRenderables(boxP, vwProps).foreach({
       case Left(ir) => ipc.addInlineRenderable(ir)
-      case Right(outOfFlow) => outOfFlow match {
-        case oboxP: BoxWithProps =>
-          // println("Setting offset of inline out of flow", boxP)
-          val cascadingOffsetY = Util.findCascadingOffsetY(boxP, oboxP.containingBlock, ipc.currPos)
-          val cascadingOffsetX = Util.findCascadingOffsetX(boxP, oboxP.containingBlock, 0)
-          oboxP.b.offsetY = cascadingOffsetY
-          oboxP.b.offsetX = cascadingOffsetX
-        case _ => ???
-      }
+      case Right(oboxP) =>
+        // println("Setting offset of inline out of flow", boxP)
+        val cascadingOffsetY = Util.findCascadingOffsetY(boxP, oboxP.containingBlock, ipc.currPos)
+        val cascadingOffsetX = Util.findCascadingOffsetX(boxP, oboxP.containingBlock, 0)
+        oboxP.b.offsetY = cascadingOffsetY
+        oboxP.b.offsetX = cascadingOffsetX
     })
     if (heightUpdate) {
       b.contentHeight = ipc.getHeight
@@ -172,7 +169,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     // b.contentWidth = inlinePseudoContext.getWidth
   }
 
-  def getInlineRenderables(boxP: BoxWithProps, vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
+  def getInlineRenderables(boxP: BoxWithProps, vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxWithProps]] = {
     if (boxP.tag == "img") {
       if (boxP.b.img != null) {
         boxP.computePaddings(vwProps)
@@ -234,7 +231,7 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     words.map(w => new InlineWordRenderable(w, ab.creator.b.visibility, ab.creator.colorProp, ab.creator.fontProp)).toVector
   }
 
-  private def getInlineRenderables(ab: AnonBox, vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxTreeNode]] = {
+  private def getInlineRenderables(ab: AnonBox, vwProps: ViewPortProps): Vector[Either[InlineRenderable, BoxWithProps]] = {
     getSimpleInlineRenderables(ab, vwProps).map(Left(_))
   }
 
