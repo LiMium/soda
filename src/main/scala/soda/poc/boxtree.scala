@@ -74,67 +74,6 @@ case object BlockContainerBoxType extends InnerBoxType
 case object FlexContainerBoxType extends InnerBoxType
 case object GridContainerBoxType extends InnerBoxType
 
-object Util {
-  def findCascadingOffsetY(boxP: BoxWithProps, cbRef: ContainingBlockRef, yOffset: Int):Int = {
-    // println("Finding cascading y offset with ", boxP, yOffset, boxP.b.offsetY)
-    val offsetY = yOffset + boxP.b.contentOffsetY
-    if (boxP.b eq cbRef.cb.b) {
-      offsetY
-    } else {
-      boxP.domParentBox.map(pb => findCascadingOffsetY(pb, cbRef, boxP.b.offsetY + offsetY)).getOrElse(offsetY)
-    }
-  }
-
-  def findCascadingOffsetX(boxP: BoxWithProps, cbRef: ContainingBlockRef, xOffset: Int):Int = {
-    // println("Finding cascading x offset with ", boxP, xOffset, boxP.b.offsetX)
-    val offsetX = xOffset + boxP.b.contentOffsetX
-    if (boxP.b eq cbRef.cb.b) {
-      offsetX
-    } else {
-      boxP.domParentBox.map(pb => findCascadingOffsetX(pb, cbRef, boxP.b.offsetX + offsetX)).getOrElse(offsetX)
-    }
-  }
-
-
-
-  val displayOuterMap = Map(
-    "none" -> "none",
-    "contents" -> "contents",
-    "block" -> "block",
-    "flow-root" -> "block",
-    "inline" -> "inline",
-    "inline-block" -> "inline",
-    "run-in" -> "run-in",
-    "list-item" -> "block",
-    "inline list-item" -> "inline",
-    "flex" -> "block",
-    "inline-flex" -> "inline",
-    "grid" -> "block",
-    "inline-grid" -> "inline",
-    "table" -> "block",
-    "inline-table" -> "inline",
-  )
-
-  val displayInnerMap = Map(
-    "none" -> "none",
-    "contents" -> "contents",
-    "block" -> "flow",
-    "flow-root" -> "flow-root",
-    "inline" -> "flow",
-    "inline-block" -> "flow-root",
-    "run-in" -> "flow",
-    "list-item" -> "flow",
-    "inline list-item" -> "flow",
-    "flex" -> "flex",
-    "inline-flex" -> "flex",
-    "grid" -> "grid",
-    "inline-grid" -> "grid",
-    "table" -> "table",
-    "inline-table" -> "table",
-  )
-
-}
-
 class AnonInlineBox(val textRun: TextRun, val creator: BoxWithProps) extends InlineSource with BoxTreeNode {
   val b: Box = new Box
   def initProps(vwProps: ViewPortProps):Unit = {}
@@ -463,4 +402,65 @@ class InitialContainingBlock extends HasBox with HasAbsChildren {
   }
   def appendAbsChild(c: BoxTreeNode): Unit = {rootBox.appendAbsChild(c)}
   def getAbsChildren: Vector[BoxTreeNode] = rootBox.getAbsChildren
+}
+
+object Util {
+  def findCascadingOffsetY(boxP: BoxWithProps, cbRef: ContainingBlockRef, yOffset: Int):Int = {
+    // println("Finding cascading y offset with ", boxP, yOffset, boxP.b.offsetY)
+    val offsetY = yOffset + boxP.b.contentOffsetY
+    if (boxP.b eq cbRef.cb.b) {
+      offsetY
+    } else {
+      boxP.domParentBox.map(pb => findCascadingOffsetY(pb, cbRef, boxP.b.offsetY + offsetY)).getOrElse(offsetY)
+    }
+  }
+
+  def findCascadingOffsetX(boxP: BoxWithProps, cbRef: ContainingBlockRef, xOffset: Int):Int = {
+    // println("Finding cascading x offset with ", boxP, xOffset, boxP.b.offsetX)
+    val offsetX = xOffset + boxP.b.contentOffsetX
+    if (boxP.b eq cbRef.cb.b) {
+      offsetX
+    } else {
+      boxP.domParentBox.map(pb => findCascadingOffsetX(pb, cbRef, boxP.b.offsetX + offsetX)).getOrElse(offsetX)
+    }
+  }
+
+
+
+  val displayOuterMap = Map(
+    "none" -> "none",
+    "contents" -> "contents",
+    "block" -> "block",
+    "flow-root" -> "block",
+    "inline" -> "inline",
+    "inline-block" -> "inline",
+    "run-in" -> "run-in",
+    "list-item" -> "block",
+    "inline list-item" -> "inline",
+    "flex" -> "block",
+    "inline-flex" -> "inline",
+    "grid" -> "block",
+    "inline-grid" -> "inline",
+    "table" -> "block",
+    "inline-table" -> "inline",
+  )
+
+  val displayInnerMap = Map(
+    "none" -> "none",
+    "contents" -> "contents",
+    "block" -> "flow",
+    "flow-root" -> "flow-root",
+    "inline" -> "flow",
+    "inline-block" -> "flow-root",
+    "run-in" -> "flow",
+    "list-item" -> "flow",
+    "inline list-item" -> "flow",
+    "flex" -> "flex",
+    "inline-flex" -> "flex",
+    "grid" -> "grid",
+    "inline-grid" -> "grid",
+    "table" -> "table",
+    "inline-table" -> "table",
+  )
+
 }
