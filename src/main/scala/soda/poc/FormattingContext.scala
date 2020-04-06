@@ -155,8 +155,10 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
       case Left(ir) => ipc.addInlineRenderable(ir)
       case Right(oboxP) =>
         // println("Setting offset of inline out of flow", boxP)
-        val cascadingOffsetY = Util.findCascadingOffsetY(boxP, oboxP.containingBlock, ipc.currPos)
-        val cascadingOffsetX = Util.findCascadingOffsetX(boxP, oboxP.containingBlock, 0)
+        val currPos = ipc.getCurrPosXY()
+        // TODO: Combine these two calls into one
+        val cascadingOffsetY = Util.findCascadingOffsetY(boxP, oboxP.containingBlock, currPos._2)
+        val cascadingOffsetX = Util.findCascadingOffsetX(boxP, oboxP.containingBlock, currPos._1)
         oboxP.b.offsetY = cascadingOffsetY
         oboxP.b.offsetX = cascadingOffsetX
     })

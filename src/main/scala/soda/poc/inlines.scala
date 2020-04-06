@@ -100,19 +100,29 @@ class Line(val yPos: Int) {
       renderables = renderables.appended(ir)
     }
   }
+
+  def getCurrPosX = width
 }
 
 class InlinePseudoContext {
   var maxWidth = 0
   var lines = Vector[Line]()
   var currLine:Line = null
-  var currPos = 0
+  private var currPosY = 0
+
+  def getCurrPosXY(): (Int, Int) = {
+    if (currLine == null) {
+      (0, 0)
+    } else {
+      ( currLine.getCurrPosX, currPosY)
+    }
+  }
 
   private def startNewLine() = {
     if (currLine != null) {
-      currPos += currLine.height
+      currPosY += currLine.height
     }
-    currLine = new Line(currPos)
+    currLine = new Line(currPosY)
     lines = lines.appended(currLine)
   }
 
