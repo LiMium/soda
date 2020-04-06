@@ -247,29 +247,14 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     boxP.boxyDomChildren.foreach{c =>
       if(config.layoutDebugLevel > 1) println(s"  layout of $c")
       if (c.isInflow) {
-        c match {
-          case hb: HasBox => {
-            hb.b.offsetY = yPos
-          }
-          case x => println("Probably shouldn't happen: " + x)
-        }
+        c.b.offsetY = yPos
 
         layout(c, vwProps)
 
-        c match {
-          case hb: HasBox => {
-            yPos += hb.b.marginBoxHeight
-          }
-          case x => println("Probably shouldn't happen: " + x)
-        }
+        yPos += c.b.marginBoxHeight
       } else {
-        c match {
-          case hb: HasBox => {
-            hb.b.offsetY = Util.findCascadingOffsetY(boxP, c.containingBlock, yPos)
-            hb.b.offsetX = Util.findCascadingOffsetX(boxP, c.containingBlock, 0)
-          }
-          case _ => ???
-        }
+        c.b.offsetY = Util.findCascadingOffsetY(boxP, c.containingBlock, yPos)
+        c.b.offsetX = Util.findCascadingOffsetX(boxP, c.containingBlock, 0)
       }
     }
     val specHeight = boxP.size.height.specified match {
