@@ -98,9 +98,9 @@ object Layout {
         case ab: AnonBox => true
       })
       if (inlineMode) {
-        boxWithProps.inlinyDomChildren = children.map(_.asInstanceOf[InlineSource])
+        boxWithProps.inlinyDomChildren = children
       } else {
-        boxWithProps.boxyDomChildren = children.map({case btn: BoxTreeNode => btn })
+        boxWithProps.boxyDomChildren = children
       }
       Some(boxWithProps)
     }
@@ -136,7 +136,7 @@ object Layout {
     }
   }
 
-  private def generateBoxNode(dn: DecoratedNode, parentBox: BoxWithProps): Option[BasicNode] = {
+  private def generateBoxNode(dn: DecoratedNode, parentBox: BoxWithProps): Option[BoxTreeNode] = {
     dn match {
       case en: ElementNode => {
         // val containingBlock = if (absolutish.contains(en.positionProp.get)) findContainingBlock(parentBox) else ContainingBlockRef(ContentArea, parentBox)

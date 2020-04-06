@@ -229,13 +229,6 @@ final class BlockFormattingContext(estBox: BoxWithProps) extends FormattingConte
     }
   }
 
-  def getAllInlineRenderables(ir: InlineSource, vwProps: ViewPortProps) = {
-    ir match {
-      case bwp: BoxWithProps => getInlineRenderables(bwp, vwProps)
-      case ab: AnonBox => getInlineRenderables(ab, vwProps)
-    }
-  }
-
   private def getSimpleInlineRenderables(ab: AnonBox, vwProps: ViewPortProps) : Vector[InlineRenderable] = {
     val words = ab.getWords
     words.map(w => new InlineWordRenderable(w, ab.creator.b.visibility, ab.creator.colorProp, ab.creator.fontProp)).toVector

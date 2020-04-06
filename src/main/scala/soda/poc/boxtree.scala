@@ -9,8 +9,6 @@ import soda.analysis.ElementNode
 import soda.analysis.TextNode
 import soda.layout.ViewPortProps
 
-sealed trait BasicNode
-
 sealed trait HasBox {
   val b: Box
 }
@@ -20,19 +18,16 @@ sealed trait HasAbsChildren {
   def appendAbsChild(c: BoxTreeNode): Unit
 }
 
-sealed trait InlineSource {
-  def isInflow: Boolean
+sealed trait BoxTreeNode extends HasBox {
   def initProps(vwProps: ViewPortProps):Unit
   def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit
-}
 
-sealed trait BoxTreeNode extends HasBox with BasicNode {
   var isInflow = true
   var containingBlock: ContainingBlockRef = null
 
   var boxyDomChildren : Vector[BoxTreeNode] = Vector.empty
   def boxyInflowChildren : Vector[BoxTreeNode] = boxyDomChildren.filter(_.isInflow)
-  var inlinyDomChildren : Vector[InlineSource] = null
+  var inlinyDomChildren : Vector[BoxTreeNode] = null
 
   def paint(g: Graphics2D): Unit
   def dump(level: Int): String
@@ -48,7 +43,7 @@ case object BlockContainerBoxType extends InnerBoxType
 case object FlexContainerBoxType extends InnerBoxType
 case object GridContainerBoxType extends InnerBoxType
 
-class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends InlineSource with BoxTreeNode {
+class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends BoxTreeNode {
   val b: Box = new Box
   def initProps(vwProps: ViewPortProps):Unit = {}
 
@@ -83,7 +78,7 @@ class BoxWithProps(
   val b: Box,
   val elemNode: ElementNode,
   val domParentBox: Option[BoxWithProps]
-  ) extends BoxTreeNode with HasAbsChildren with InlineSource {
+  ) extends BoxTreeNode with HasAbsChildren {
   private var absChildren: Vector[BoxTreeNode] = Vector()
   def getAbsChildren: Vector[BoxTreeNode] = absChildren
   def appendAbsChild(c: BoxTreeNode): Unit = {
