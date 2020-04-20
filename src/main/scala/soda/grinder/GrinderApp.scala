@@ -17,6 +17,7 @@ import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import java.io.ByteArrayOutputStream
 import soda.utils.Util
+import soda.poc.config
 
 object GrinderApp {
   val ss = new ServerSocket(0)
@@ -130,7 +131,7 @@ object GrinderApp {
     // Wait for ack
     br.readLine()
   }
-  
+
   private var width = 800
   private var height  = 800
 
@@ -143,7 +144,7 @@ object GrinderApp {
 
     markDoneAndWaitForAck(s, br)
   }
-  
+
   private def markDoneAndWaitForAck(s: Socket, br: BufferedReader) = {
     val os = new DataOutputStream(s.getOutputStream)
     os.writeInt(0)
@@ -154,7 +155,11 @@ object GrinderApp {
   }
 
   def main(args: Array[String]) = {
-    startGngrServer()
-    startServer()
+    if (config.paintDebugLevel > 0 || config.showBoxes) {
+      Util.warnln("Paint debug level is too high or showBoxes is true")
+    } else {
+      startGngrServer()
+      startServer()
+    }
   }
 }
