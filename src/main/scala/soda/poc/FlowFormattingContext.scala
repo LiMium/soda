@@ -216,8 +216,10 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
 
     widthOpt match {
       case None =>
-          val rem = avlWidth
-          (rem, compMarginLeft.getOrElse(0), compMarginRight.getOrElse(0))
+          val mLeft = compMarginLeft.getOrElse(0)
+          val mRight = compMarginRight.getOrElse(0)
+          val rem = avlWidth - (mLeft + mRight)
+          (rem, mLeft, mRight)
       case Some(width) =>
         if (compMarginLeft.isDefined) {
           // overconstrained, marginRight has to absorb the difference
