@@ -61,6 +61,11 @@ sealed trait Content {
   var absolutes: Vector[Content] = Vector.empty
 
   // after layout
+  /**
+    * Paint self within the content box
+    *
+    * @param g Origin is set at top-left of content box
+    */
   protected def paintSelf(g: Graphics2D): Unit
 
   private def clip(g: Graphics2D):Unit = {
@@ -73,21 +78,19 @@ sealed trait Content {
   def paintAll(g: Graphics2D): Unit = {
     val g2 = g.create().asInstanceOf[Graphics2D]
     g2.translate(box.paintOffsetX, box.paintOffsetY)
-    /*
-    g2.setColor(Color.BLUE)
-    g2.drawRect(0, 0, box.marginBoxWidth-1, box.marginBoxHeight-1)
-    */
-    // g2.setColor(new Color(30, 30, 30,30))
-    // g2.fillRect(0, 0, box.marginBoxWidth-1, box.marginBoxHeight-1)
     box.paint(g2, renderProps.bgColor);
-    paintSelf(g2)
-    if (miniContext != null) {
+
+    {
       val g3 = g2.create().asInstanceOf[Graphics2D]
       g3.translate(box.contentOffsetX, box.contentOffsetY)
-      clip(g3)
-      miniContext.paint(g3)
+      paintSelf(g3)
+      if (miniContext != null) {
+        clip(g3)
+        miniContext.paint(g3)
+      }
       g3.dispose()
     }
+
     if (absolutes.length > 0) {
       val g3 = g2.create().asInstanceOf[Graphics2D]
       g3.translate(box.paddingBoxOffsetX, box.paddingBoxOffsetY)
@@ -185,10 +188,7 @@ abstract class BlockContent(val parent: Content, canPaintOpt: Option[CanPaint], 
     // val g3 = g2.create(box.contentOffsetX, box.contentOffsetY, box.contentWidth, box.contentHeight).asInstanceOf[Graphics2D]
     // miniContext.paint(g3)
     canPaintOpt.foreach(cp => {
-      val g3 = g.create().asInstanceOf[Graphics2D]
-      g3.translate(box.contentOffsetX, box.contentOffsetY)
-      cp.paint(g3)
-      g3.dispose()
+      cp.paint(g)
     })
 
     // g2.dispose()
