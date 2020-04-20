@@ -20,17 +20,6 @@ trait CanPaint {
   def paint(g: Graphics2D): Unit
 }
 
-/*
-trait Content extends CanPaint {
-  val displayOuter: String
-  // val position: String
-  // val float: String
-
-  def layout(vwProps: ViewPortProps): Unit
-}
-
-*/
-
 sealed trait HasAbsChildren {
   def getAbsChildren: Vector[BoxTreeNode]
   def appendAbsChild(c: BoxTreeNode): Unit
@@ -514,7 +503,6 @@ class BoxWithProps(
           override def toString = "inline replaced " + debugId
           val isBreak: Boolean = false
           def paintSelf(g: Graphics2D): Unit = {
-            // g.drawImage(img, box.paintOffsetX + box.contentOffsetX, box.paintOffsetY + box.contentOffsetY, box.contentWidth, box.contentHeight, null)
             g.drawImage(img, 0, 0, box.contentWidth, box.contentHeight, null)
           }
           val props = new LayoutProps(
@@ -546,15 +534,7 @@ class BoxWithProps(
             Vector(new InlineRenderable() {
               override def toString = "inline wrapper for " + debugId
               val parent: Content = aParent
-              def paintSelf(g: Graphics2D): Unit = {
-                /*
-                val g2 = g.create().asInstanceOf[Graphics2D]
-                g2.translate(box.offsetX, box.offsetY)
-                g2.dispose()
-
-                // miniContext.paint(g)
-                */
-              }
+              def paintSelf(g: Graphics2D): Unit = { }
               val isBreak: Boolean = false
               override def getFormattingContext() = applicableFormattingContext
               override def getSubContent() = boxyDomChildren.flatMap(_.getContents(this, vwProps))
