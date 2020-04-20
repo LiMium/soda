@@ -159,10 +159,13 @@ sealed trait Content {
   def computePaddings(): SidesInt = {
     val paddingSpec = props.padding
     val result = new SidesInt()
-    result.top = resolveLength(paddingSpec.top, containingHeight).getOrElse(0)
-    result.right = resolveLength(paddingSpec.right, containingHeight).getOrElse(0)
-    result.bottom = resolveLength(paddingSpec.bottom, containingHeight).getOrElse(0)
-    result.left = resolveLength(paddingSpec.left, containingHeight).getOrElse(0)
+
+    // Note: percentage values for padding always refer to containing width and not height
+    result.top = resolveLength(paddingSpec.top, containingWidth).getOrElse(0)
+    result.right = resolveLength(paddingSpec.right, containingWidth).getOrElse(0)
+    result.bottom = resolveLength(paddingSpec.bottom, containingWidth).getOrElse(0)
+    result.left = resolveLength(paddingSpec.left, containingWidth).getOrElse(0)
+
     result
   }
 }
