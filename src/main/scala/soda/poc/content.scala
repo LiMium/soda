@@ -176,22 +176,13 @@ sealed trait Content {
 abstract class BlockContent(val parent: Content, canPaintOpt: Option[CanPaint], debugStr: String, val renderProps: RenderProps) extends Content {
   val displayOuter = "block"
   def paintSelf(g: Graphics2D): Unit = {
-    // val g2 = g.create(box.paintOffsetX, box.paintOffsetY, box.marginBoxWidth, box.marginBoxHeight).asInstanceOf[Graphics2D]
-    // val g2 = g.create().asInstanceOf[Graphics2D]
-    // g2.translate(box.paintOffsetX, box.paintOffsetY)
     if (config.paintDebugLevel > 1) {
       g.setColor(Color.green.darker())
       g.drawRect(0, 0, box.marginBoxWidth-1, box.marginBoxHeight-1)
     }
-    // box.paint(g2, renderProps.bgColor)
-
-    // val g3 = g2.create(box.contentOffsetX, box.contentOffsetY, box.contentWidth, box.contentHeight).asInstanceOf[Graphics2D]
-    // miniContext.paint(g3)
     canPaintOpt.foreach(cp => {
       cp.paint(g)
     })
-
-    // g2.dispose()
   }
   override def toString(): String = debugStr
 }
