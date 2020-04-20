@@ -151,9 +151,6 @@ sealed trait Content {
 
   def computeRelativeOffsets(vwProps: ViewPortProps) = {
     if (props.position == "relative") {
-      // val containingWidth = parent.box.contentWidth
-      // val containingHeight = parent.box.contentHeight
-
       box.renderOffsetY = findRelativeOffset(1, containingHeight, "top", vwProps).orElse(findRelativeOffset(-1, containingHeight, "bottom", vwProps)).getOrElse(0)
       box.renderOffsetX = findRelativeOffset(1, containingWidth, "left", vwProps).orElse(findRelativeOffset(-1, containingWidth, "right", vwProps)).getOrElse(0)
     }
@@ -177,8 +174,8 @@ abstract class BlockContent(val parent: Content, canPaintOpt: Option[CanPaint], 
   val displayOuter = "block"
   def paintSelf(g: Graphics2D): Unit = {
     if (config.paintDebugLevel > 1) {
-      g.setColor(Color.green.darker())
-      g.drawRect(0, 0, box.marginBoxWidth-1, box.marginBoxHeight-1)
+      g.setColor(Color.magenta.darker())
+      g.drawRect(0, 0, box.contentWidth-1, box.contentHeight-1)
     }
     canPaintOpt.foreach(cp => {
       cp.paint(g)
