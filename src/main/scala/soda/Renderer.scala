@@ -35,7 +35,9 @@ object Renderer {
       val decoratedDOM = Analyser.process(url)
       val vwProps = ViewPortProps(width, height, 96, g2)
       val rootBoxOpt = Layout.process(decoratedDOM, vwProps)
-      rootBoxOpt foreach {_.paint(g2)}
+      rootBoxOpt foreach {r =>
+        r.paintAll(g2)
+      }
     }
 
     def renderOld(g2: Graphics2D, url: java.net.URL, width: Int, height: Int, userCSS: String) = {

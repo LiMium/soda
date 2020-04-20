@@ -1,0 +1,285 @@
+package soda.poc
+
+import java.awt.Graphics2D
+
+import soda.layout.ViewPortProps
+import java.awt.Color
+import soda.utils.Util
+
+/* Computed values */
+class LayoutProps(
+  val displayOuter: String,
+  val displayInner: String,
+  val position: String,
+  val margin: Sides[LengthSpec],
+  val border: Sides[Border],
+  val padding: Sides[LengthSpec],
+  val width: LengthSpec,
+  val compMinWidth: LengthSpec,
+  val compMaxWidth: LengthSpec,
+  val height: LengthSpec,
+  val offsets: Sides[LengthSpec], // Used for top, left, bottom, right
+)
+
+class RenderProps (
+  val bgColor: Color,
+  val overflowX: String,
+  val overflowY: String,
+)
+
+case class ContainingBlockRef(areaType: ContainingAreaType, cb: Content) {
+  // TODO: area Type based computation
+  def width = areaType match {
+    case PaddingArea => cb.box.paddingBoxWidth
+    case ContentArea => cb.box.contentWidth
+    case WholeArea => ???
+  }
+  // def height = cb.box.contentHeight
+  def height = areaType match {
+    case PaddingArea => cb.box.paddingBoxHeight
+    case ContentArea => cb.box.paddingBoxHeight
+    case WholeArea => ???
+  }
+
+  def addAsAbsoluteChild(c: Content):Unit = {
+    cb.absolutes :+= c
+  }
+}
+
+sealed trait Content {
+  val parent: Content
+  lazy val level:Int = if (parent == null) 0 else parent.level + 1
+  // input to layout
+  val props: LayoutProps
+  val renderProps: RenderProps
+  def getFormattingContext(): FormattingContext
+  def getSubContent(): Vector[Content]
+
+  // output of layout
+  val box = new Box()
+  var miniContext: MiniContext[_] = null
+  var absolutes: Vector[Content] = Vector.empty
+
+  // after layout
+  protected def paintSelf(g: Graphics2D): Unit
+
+  private def clip(g: Graphics2D):Unit = {
+    val currClipBounds = g.getClipBounds
+    val clipBoundWidth = if (renderProps.overflowX == "hidden" || renderProps.overflowX == "scroll") -currClipBounds.x + box.contentWidth else currClipBounds.width
+    val clipBoundHeight = if (renderProps.overflowY == "hidden" || renderProps.overflowY == "scroll") -currClipBounds.y + box.contentHeight else currClipBounds.height
+    g.clipRect(currClipBounds.x, currClipBounds.y, clipBoundWidth, clipBoundHeight)
+  }
+
+  def paintAll(g: Graphics2D): Unit = {
+    val g2 = g.create().asInstanceOf[Graphics2D]
+    g2.translate(box.paintOffsetX, box.paintOffsetY)
+    /*
+    g2.setColor(Color.BLUE)
+    g2.drawRect(0, 0, box.marginBoxWidth-1, box.marginBoxHeight-1)
+    */
+    // g2.setColor(new Color(30, 30, 30,30))
+    // g2.fillRect(0, 0, box.marginBoxWidth-1, box.marginBoxHeight-1)
+    box.paint(g2, renderProps.bgColor);
+    paintSelf(g2)
+    if (miniContext != null) {
+      val g3 = g2.create().asInstanceOf[Graphics2D]
+      g3.translate(box.contentOffsetX, box.contentOffsetY)
+      clip(g3)
+      miniContext.paint(g3)
+      g3.dispose()
+    }
+    if (absolutes.length > 0) {
+      val g3 = g2.create().asInstanceOf[Graphics2D]
+      g3.translate(box.paddingBoxOffsetX, box.paddingBoxOffsetY)
+      clip(g3)
+      paintAbsolutes(g3)
+      g3.dispose()
+    }
+    g2.dispose()
+  }
+
+  protected def paintAbsolutes(g: Graphics2D): Unit = {
+    absolutes.foreach{ ab =>
+      ab.paintAll(g)
+    }
+  }
+
+  // util
+  private def resolveLength(lengthSpec: LengthSpec, containingBlockLength: Float) = {
+    lengthSpec match {
+      case AbsLength(pxs) => Some(pxs.toInt)
+      case ParentRelLength(pct) => Some((pct * containingBlockLength).toInt)
+      case AutoLength => None
+      case x => Util.warnln("Not handled: " + x); Some(0)
+    }
+  }
+  private def findRelativeOffset(factor:Int, parentLength: Float, propName: String, vwProps: ViewPortProps) = {
+    resolveLength(props.offsets.byName(propName), parentLength).map(_ * factor)
+  }
+
+  private def findRootContentNode: Content = {
+    if (parent.parent == null) {
+      parent
+    } else {
+      parent.findRootContentNode
+    }
+  }
+
+  private def findContainerForAbs: Content = {
+    if (parent.props.position != "static") {
+      parent
+    } else {
+      parent.findContainerForAbs
+    }
+  }
+
+  lazy val containingBlock = {
+    if (props.position == "absolute") {
+      ContainingBlockRef(PaddingArea, findContainerForAbs)
+    } else if (props.position == "fixed") {
+      ContainingBlockRef(PaddingArea, findRootContentNode)
+    } else {
+      ContainingBlockRef(ContentArea, parent)
+    }
+  }
+
+  def containingWidth = containingBlock.width
+  def containingHeight = containingBlock.height
+
+  def computeRelativeOffsets(vwProps: ViewPortProps) = {
+    if (props.position == "relative") {
+      // val containingWidth = parent.box.contentWidth
+      // val containingHeight = parent.box.contentHeight
+
+      box.renderOffsetY = findRelativeOffset(1, containingHeight, "top", vwProps).orElse(findRelativeOffset(-1, containingHeight, "bottom", vwProps)).getOrElse(0)
+      box.renderOffsetX = findRelativeOffset(1, containingWidth, "left", vwProps).orElse(findRelativeOffset(-1, containingWidth, "right", vwProps)).getOrElse(0)
+    }
+  }
+
+  def computePaddings(): SidesInt = {
+    val paddingSpec = props.padding
+    val result = new SidesInt()
+    result.top = resolveLength(paddingSpec.top, containingHeight).getOrElse(0)
+    result.right = resolveLength(paddingSpec.right, containingHeight).getOrElse(0)
+    result.bottom = resolveLength(paddingSpec.bottom, containingHeight).getOrElse(0)
+    result.left = resolveLength(paddingSpec.left, containingHeight).getOrElse(0)
+    result
+  }
+}
+
+abstract class BlockContent(val parent: Content, canPaintOpt: Option[CanPaint], debugStr: String, val renderProps: RenderProps) extends Content {
+  val displayOuter = "block"
+  def paintSelf(g: Graphics2D): Unit = {
+    // val g2 = g.create(box.paintOffsetX, box.paintOffsetY, box.marginBoxWidth, box.marginBoxHeight).asInstanceOf[Graphics2D]
+    // val g2 = g.create().asInstanceOf[Graphics2D]
+    // g2.translate(box.paintOffsetX, box.paintOffsetY)
+    if (config.paintDebugLevel > 1) {
+      g.setColor(Color.green.darker())
+      g.drawRect(0, 0, box.marginBoxWidth-1, box.marginBoxHeight-1)
+    }
+    // box.paint(g2, renderProps.bgColor)
+
+    // val g3 = g2.create(box.contentOffsetX, box.contentOffsetY, box.contentWidth, box.contentHeight).asInstanceOf[Graphics2D]
+    // miniContext.paint(g3)
+    canPaintOpt.foreach(cp => {
+      val g3 = g.create().asInstanceOf[Graphics2D]
+      g3.translate(box.contentOffsetX, box.contentOffsetY)
+      cp.paint(g3)
+      g3.dispose()
+    })
+
+    // g2.dispose()
+  }
+  override def toString(): String = debugStr
+}
+
+trait InlineRenderable extends Content {
+  val isBreak: Boolean
+  val isSpace: Boolean = false
+
+  def getFormattingContext():FormattingContext = null
+  def getSubContent(): Vector[Content] = Vector.empty
+}
+
+final class InlineBreak(val parent: Content) extends InlineRenderable {
+  def paintSelf(g: Graphics2D): Unit = {}
+  val isBreak: Boolean = true
+  val props = new LayoutProps(
+    "inline", "flow", "static",
+    new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
+    NoneLength, ContentUtil.zeroLength, NoneLength,
+    NoneLength,
+    ContentUtil.emptyOffsets)
+
+  val renderProps: RenderProps = new RenderProps(null, "visible", "visible")
+}
+
+final class InlineWordRenderable(val parent: Content, word: String, visibility: Boolean, colorProp: ColorProp, fontProp: FontProp) extends InlineRenderable {
+  override def toString = s"word '$word' est: $estWidth x $estHeight"
+  def paintSelf(g: Graphics2D): Unit = {
+    if (visibility) {
+      g.setColor(colorProp.computed)
+      g.setFont(fontProp.font)
+      // g.drawString(word, box.offsetX, box.offsetY + fontProp.ascent)
+      g.drawString(word, 0, fontProp.ascent)
+    }
+  }
+
+  private val estWidth = AbsLength(fontProp.estWidth(word))
+  private val estHeight = AbsLength(fontProp.size)
+  val isBreak: Boolean = false
+  override val isSpace: Boolean = word == " "
+  val props = new LayoutProps(
+    "inline", "flow", "static",
+    new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
+    estWidth, ContentUtil.zeroLength, NoneLength,
+    estHeight,
+    ContentUtil.emptyOffsets)
+
+  val renderProps: RenderProps = new RenderProps(null, "visible", "visible")
+}
+
+object ContentUtil {
+  val emptyBorder = new Sides[Border](new Border())
+  val emptyOffsets = new Sides[LengthSpec](AutoLength)
+  val emptySideInt = new SidesInt
+  val zeroLength = AbsLength(0)
+
+  def isAbsolutish(position: String) = {
+    absolutish.contains(position)
+  }
+  val absolutish = Array("absolute", "fixed")
+
+  def findCascadingOffset(c: Content, containingBlock: ContainingBlockRef, pos: (Int, Int)): (Int, Int) = {
+    if (c eq containingBlock.cb) {
+      (pos._1 + c.box.paddingThickness.left, pos._2 + c.box.paddingThickness.top)
+    } else {
+      val pOffset = findCascadingOffset(c.parent, containingBlock, pos)
+      (pOffset._1 + c.box.paintOffsetX + c.box.contentOffsetX, pOffset._2 + c.box.paintOffsetY + c.box.contentOffsetY)
+    }
+  }
+
+  /**
+    * Transport the given content to its containing block
+    *
+    * @param c
+    * @param currPos
+    */
+  def transportAbs(c: Content, currPos: (Int, Int)): Unit = {
+    val offset = findCascadingOffset(c, c.containingBlock, currPos)
+    c.box.offsetX = offset._1
+    c.box.offsetY = offset._2
+    c.containingBlock.addAsAbsoluteChild(c)
+  }
+}
+
+sealed trait LengthConstraint {
+  val avl: Int
+}
+case class FitAvailable(avl: Int) extends LengthConstraint
+case class FitToShrink(avl: Int) extends LengthConstraint
+
+case class LayoutConstraints(
+  widthConstraint: LengthConstraint,
+  heightConstraint: LengthConstraint,
+  vwProps: ViewPortProps)

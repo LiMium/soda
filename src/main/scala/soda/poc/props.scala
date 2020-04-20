@@ -92,7 +92,7 @@ object LengthProp {
       } else if (specStr == "auto") {
         AutoLength
       } else {
-        println("Unhandled length: " + specStr)
+        soda.utils.Util.warnln("Unhandled length: " + specStr)
         // ???
         initial
       }
@@ -123,7 +123,7 @@ object ColorProp {
     } else if (colorStr == "currentColor") {
       initial
     } else {
-      println("Unhandled: " + colorStr)
+      soda.utils.Util.warnln("Unhandled: " + colorStr)
       initial
     }
   }
@@ -169,12 +169,14 @@ class StringProp(key: String, initial: String) extends Property[String, String, 
   }
 }
 
+/*
 class Thickness {
   val top = new LengthProp("top", AutoLength)
   val right = new LengthProp("right", AutoLength)
   val bottom = new LengthProp("bottom", AutoLength)
   val left = new LengthProp("left", AutoLength)
 }
+*/
 
 class Position {
   var x = new LengthProp("left", AutoLength)

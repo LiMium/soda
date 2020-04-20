@@ -2,6 +2,7 @@ package soda.utils
 
 import soda.Parser
 import java.net.URL
+import soda.poc.config
 
 case class PositionedElement[T](elem: T, isFirst: Boolean, isLast: Boolean, index: Int)
 
@@ -20,5 +21,15 @@ object Util {
   def parse(url: URL) = {
     val stream = url.openStream()
     Parser.parse(url.toExternalForm(), stream)
+  }
+
+  def warnln(s: String) = {
+    println(Console.RED_B + s + Console.RESET)
+  }
+
+  def logLayout(logLevel: Int, s: String, indentLevel: Int = 0): Unit = {
+    if (logLevel <= config.layoutDebugLevel) {
+      println(("."*indentLevel) + s)
+    }
   }
 }

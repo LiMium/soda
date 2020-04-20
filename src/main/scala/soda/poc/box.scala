@@ -18,6 +18,15 @@ class Sides[T](initial: => T) {
     f("bottom", bottom)
     f("left", left)
   }
+
+  def byName(name: String): T = {
+    name match {
+      case "top" => top
+      case "right" => right
+      case "bottom" => bottom
+      case "left" => left
+    }
+  }
 }
 
 class SidesInt extends Sides(0) {
@@ -37,17 +46,16 @@ class Border {
 }
 
 class Box {
-  val border = new Sides[Border](new Border) {
+  var border: Sides[Border] = new Sides[Border](new Border) {
 
-    def vert = top.thickness + bottom.thickness
-    def horiz = left.thickness + right.thickness
   }
+  def borderVert = border.top.thickness + border.bottom.thickness
+  def borderHoriz = border.left.thickness + border.right.thickness
 
   val marginThickness = new SidesInt
-  val paddingThickness = new SidesInt
+  var paddingThickness = new SidesInt
 
   val startPos = new Position
-  var img: BufferedImage = null
 
   var offsetX = 0
   var offsetY = 0
@@ -55,27 +63,35 @@ class Box {
   var renderOffsetX = 0
   var renderOffsetY = 0
 
-  var contentWidth = 0
-  var shrinkToFit = false
-  var contentHeight = 0
-  var visibility: Boolean = true
-  var overflowX: String = "visible"
-  var overflowY: String = "visible"
+  def paintOffsetX = offsetX + renderOffsetX
+  def paintOffsetY = offsetY + renderOffsetY
 
-  def contentOffsetX = marginThickness.left + border.left.thickness + paddingThickness.left
-  def contentOffsetY = marginThickness.top + border.top.thickness + paddingThickness.top
+  var contentWidth = 0
+  var contentHeight = 0
+  // var shrinkToFit = false
+  var visibility: Boolean = true
+  // var overflowX: String = "visible"
+  // var overflowY: String = "visible"
+
+  def paddingBoxOffsetX = marginThickness.left + border.left.thickness
+  def paddingBoxOffsetY = marginThickness.top + border.top.thickness
+
+  def contentOffsetX = paddingBoxOffsetX + paddingThickness.left
+  def contentOffsetY = paddingBoxOffsetY + paddingThickness.top
 
   def marginWidth = marginThickness.horiz
-  def borderWidth = border.horiz
+  def borderWidth = borderHoriz
   def paddingWidth = paddingThickness.horiz
+  def paddingBoxWidth = paddingWidth + contentWidth
   def borderPaddingWidth = borderWidth + paddingWidth
   def borderBoxWidth = borderPaddingWidth + contentWidth
   def marginBoxWidth = marginWidth + borderBoxWidth
   def marginBoxSansContentWidth = marginWidth + borderWidth + paddingWidth
 
   def marginHeight = marginThickness.vert
-  def borderHeight = border.vert
+  def borderHeight = borderVert
   def paddingHeight = paddingThickness.vert
+  def paddingBoxHeight = paddingHeight + contentHeight
   def borderBoxHeight = borderHeight + paddingHeight + contentHeight
   def marginBoxHeight = marginHeight + borderBoxHeight
   def marginBoxSansContentHeight = marginHeight + borderHeight + paddingHeight
@@ -98,13 +114,6 @@ class Box {
 
       val borderRect = Rect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
       paintBorder(g, borderRect)
-
-      if (img != null) {
-        val w = img.getWidth
-        val h = img.getHeight
-        // g.drawImage(img, 0, 0, w, h, null)
-        g.drawImage(img, contentOffsetX, contentOffsetY, contentWidth, contentHeight, null)
-      }
     }
   }
 
