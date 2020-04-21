@@ -28,18 +28,21 @@ class RenderProps (
 )
 
 case class ContainingBlockRef(areaType: ContainingAreaType, cb: Content) {
-  // TODO: area Type based computation
-  def width = areaType match {
-    case PaddingArea => cb.box.paddingBoxWidth
-    case ContentArea => cb.box.contentWidth
-    case WholeArea => ???
-  }
-  // def height = cb.box.contentHeight
-  def height = areaType match {
-    case PaddingArea => cb.box.paddingBoxHeight
-    case ContentArea => cb.box.paddingBoxHeight
-    case WholeArea => ???
-  }
+  def width = if (cb != null) {
+     areaType match {
+       case PaddingArea => cb.box.paddingBoxWidth
+       case ContentArea => cb.box.contentWidth
+       case WholeArea => ???
+     }
+    } else 0
+
+  def height = if (cb != null) {
+    areaType match {
+      case PaddingArea => cb.box.paddingBoxHeight
+      case ContentArea => cb.box.paddingBoxHeight
+      case WholeArea => ???
+    }
+  } else 0
 
   def addAsAbsoluteChild(c: Content):Unit = {
     cb.absolutes :+= c
