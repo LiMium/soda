@@ -12,39 +12,20 @@ import java.awt.image.BufferedImage
 import java.net.URL
 import javax.imageio.ImageIO
 
-sealed trait HasBox {
-  val b: Box
-}
-
 trait CanPaint {
   def paint(g: Graphics2D): Unit
 }
 
-sealed trait HasAbsChildren {
-  def getAbsChildren: Vector[BoxTreeNode]
-  def appendAbsChild(c: BoxTreeNode): Unit
-}
-
-sealed trait BoxTreeNode extends HasBox {
-  // var miniContext: MiniContext[_] = null
+sealed trait BoxTreeNode {
   def getContents(parent: Content, vwProps: ViewPortProps): Vector[Content]
 
   def initProps(vwProps: ViewPortProps):Unit
-  def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit
-
-  var isInflow = true
-  val isFlowRoot = false
-  // var containingBlock: ContainingBlockRef = null
 
   var boxyDomChildren : Vector[BoxTreeNode] = Vector.empty
-  def boxyInflowChildren : Vector[BoxTreeNode] = boxyDomChildren.filter(_.isInflow)
-  // var inlinyDomChildren : Vector[BoxTreeNode] = null
-  def inlinyDomChildren : Vector[BoxTreeNode] = boxyDomChildren
 
   def dump(level: Int): String
 
   def computeL2Props(vwProps: ViewPortProps):Unit
-  def computeRelativeOffsets(vwProps: ViewPortProps): Unit = {}
 }
 
 sealed trait InnerBoxType
@@ -79,19 +60,10 @@ class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends BoxTreeNode {
 
   def getWords = split(tn.text.text)
 
-  /*
-  def paint(g: java.awt.Graphics2D): Unit = {
-    b.paint(g, null)
-    inlinePseudoContext.paint(g)
-  }
-
-  val inlinePseudoContext = new InlineMiniContext()
-  */
   def dump(level: Int): String = {
     ("  " * level) + "Anon:\n" + tn
   }
   def computeL2Props(vwProps: ViewPortProps) = {}
-  def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit = { }
 }
 
 // Root box will have parentBlock == None
@@ -99,14 +71,7 @@ class BoxWithProps(
   val b: Box,
   val elemNode: ElementNode,
   val domParentBox: Option[BoxWithProps]
-  ) extends BoxTreeNode with HasAbsChildren {
-
-
-  private var absChildren: Vector[BoxTreeNode] = Vector()
-  def getAbsChildren: Vector[BoxTreeNode] = absChildren
-  def appendAbsChild(c: BoxTreeNode): Unit = {
-    absChildren :+= c
-  }
+  ) extends BoxTreeNode {
 
   val tag = elemNode.elem.tag
 
@@ -131,7 +96,6 @@ class BoxWithProps(
   val displayComputed = elemNode.displayProp.computed.get
   val displayOuter = BoxUtil.displayOuterMap.getOrElse(displayComputed, "block")
   val displayInner = BoxUtil.displayInnerMap.getOrElse(displayComputed, displayComputed)
-  override val isFlowRoot = displayOuter == "flow-root"
 
   lazy val createsBFC = {
     val floatProp = elemNode.floatProp.get
@@ -179,19 +143,8 @@ class BoxWithProps(
   val colorProp = new ColorProp("color")
   val fontProp = new FontProp()
 
-  /*
-  def getBorder(name: String) = name match {
-    case "left" => borderLeft
-    case "right" => borderRight
-    case "top" => borderTop
-    case "bottom" => borderBottom
-  }
-  */
-
   // Level 3 properties
   val size = new Size()
-
-  // def computedColor: Color = { color.computed }
 
   def computeBorderProps(vwProps: ViewPortProps) = {
     val nd = elemNode.nd
@@ -251,31 +204,17 @@ class BoxWithProps(
   def computeL2Props(vwProps: ViewPortProps):Unit = {
     computeSelfL2Props(vwProps)
     boxyDomChildren.foreach(_.computeL2Props(vwProps))
-    if (inlinyDomChildren != null) {
-      inlinyDomChildren.foreach {
-        case bwp : BoxWithProps => bwp.computeL2Props(vwProps)
-        case _ =>
-      }
-    }
   }
 
   def initProps(vwProps: ViewPortProps):Unit = {
     computeL2Props(vwProps)
   }
 
-  def paint(g: Graphics2D): Unit = {
-    ???
-  }
-
   val blockLevel = displayOuter == "block"
-  lazy val inlineMode = inlinyDomChildren != null
 
   def dump(level: Int): String = {
     ("  " * level) + s"$debugId\n" + boxyDomChildren.map(_.dump(level + 1)).mkString("\n")
   }
-
-  // def containingWidth = containingBlock.width
-  // def containingHeight = containingBlock.height
 
   private def resolveLengthForLayout(lengthSpec: LengthSpec):LengthSpec = {
     lengthSpec match {
@@ -293,39 +232,6 @@ class BoxWithProps(
     }
   }
 
-  /*
-  def getComputedWidth = {
-    size.width.specified match {
-      case AutoLength => None
-      case x => Some(resolveLength(x, containingWidth))
-    }
-  }
-
-  def getComputedMinWidth = {
-    resolveLength(size.minWidth.specified, containingWidth)
-  }
-
-  def getComputedMargin(sideStr: String) = {
-    val side = sideStr match {
-      case "left" => size.marginLeft
-      case "right" => size.marginRight
-      case "top" => size.marginTop
-      case "bottom" => size.marginBottom
-    }
-
-    side.specified match {
-      case AutoLength => None
-      case x => Some(resolveLength(x, containingWidth))
-    }
-  }
-
-  def getComputedMaxWidth = {
-    size.maxWidth.specified match {
-      case NoneLength => None
-      case x => Some(resolveLength(x, containingWidth))
-    }
-  }
-  */
 
   private def findRelativeOffset(factor:Int, parentLength: Float, prop: String, vwProps: ViewPortProps) = {
     Property.getSpec(elemNode.nd, prop).map(LengthProp.parseSpec(_)).map(resolveLength(_, parentLength)).map(_ * factor)
@@ -340,47 +246,6 @@ class BoxWithProps(
     paddingThickness.right = getComputedPadding(size.paddingRight.specified, vwProps)
     paddingThickness.top = getComputedPadding(size.paddingTop.specified, vwProps)
     paddingThickness.bottom = getComputedPadding(size.paddingBottom.specified, vwProps)
-  }
-
-  /*
-  override def computeRelativeOffsets(vwProps: ViewPortProps) = {
-    if (positionProp == "relative") {
-      b.renderOffsetY = findRelativeOffset(1, containingHeight, "top", vwProps).orElse(findRelativeOffset(-1, containingHeight, "bottom", vwProps)).getOrElse(0)
-      b.renderOffsetX = findRelativeOffset(1, containingWidth, "left", vwProps).orElse(findRelativeOffset(-1, containingWidth, "right", vwProps)).getOrElse(0)
-    }
-    boxyInflowChildren.foreach {_.computeRelativeOffsets(vwProps)}
-    if (inlinyDomChildren != null) {
-      inlinyDomChildren.foreach {_.computeRelativeOffsetsOfBoxes(vwProps)}
-    }
-  }
-
-  def computeWidths() = {
-    val specWidthOpt = size.width.specified match {
-      case AutoLength => if (isReplaced) None else Some(containingWidth - b.marginBoxSansContentWidth)
-      case x => Some(resolveLength(x, containingWidth))
-    }
-    specWidthOpt.foreach {specWidth =>
-      b.contentWidth = specWidth
-    }
-    specWidthOpt.isDefined
-  }
-
-  def computeHeights() = {
-    lazy val containingHeight = containingBlock.height
-    val specHeight = size.height.specified match {
-      case AutoLength => None
-      case x => Some(resolveLength(x, containingHeight))
-    }
-    specHeight match {
-      case Some(pxs) => b.contentHeight = pxs
-      case None =>
-    }
-    specHeight.isDefined
-  }
-  */
-
-  def computeRelativeOffsetsOfBoxes(vwProps: ViewPortProps): Unit = {
-    computeRelativeOffsets(vwProps)
   }
 
   override def toString = debugId
@@ -415,7 +280,6 @@ class BoxWithProps(
           val painter = new CanPaint {
             var c: Content = _
             def paint(g: Graphics2D): Unit = {
-              // g.drawImage(img, c.box.paintOffsetX, 0, c.box.contentWidth, c.box.contentHeight, null)
               g.drawImage(img, 0, 0, c.box.contentWidth, c.box.contentHeight, null)
             }
           }
@@ -501,29 +365,6 @@ case object PaddingArea extends ContainingAreaType
 case object ContentArea extends ContainingAreaType
 
 object BoxUtil {
-/*
-  def findCascadingOffsetY(boxP: BoxWithProps, cbRef: ContainingBlockRef, yOffset: Int):Int = {
-    // println("Finding cascading y offset with ", boxP, yOffset, boxP.b.offsetY)
-    val offsetY = yOffset + boxP.b.contentOffsetY
-    if (boxP.b eq cbRef.cb.b) {
-      offsetY
-    } else {
-      boxP.domParentBox.map(pb => findCascadingOffsetY(pb, cbRef, boxP.b.offsetY + offsetY)).getOrElse(offsetY)
-    }
-  }
-
-  def findCascadingOffsetX(boxP: BoxWithProps, cbRef: ContainingBlockRef, xOffset: Int):Int = {
-    // println("Finding cascading x offset with ", boxP, xOffset, boxP.b.offsetX)
-    val offsetX = xOffset + boxP.b.contentOffsetX
-    if (boxP.b eq cbRef.cb.b) {
-      offsetX
-    } else {
-      boxP.domParentBox.map(pb => findCascadingOffsetX(pb, cbRef, boxP.b.offsetX + offsetX)).getOrElse(offsetX)
-    }
-  }
-  */
-
-
 
   val displayOuterMap = Map(
     "none" -> "none",
