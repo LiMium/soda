@@ -101,35 +101,6 @@ class BoxWithProps(
   val domParentBox: Option[BoxWithProps]
   ) extends BoxTreeNode with HasAbsChildren {
 
-    /*
-  def getContents(): Vector[Content] = {
-    println("Get contents in ", debugId)
-    boxyDomChildren.flatMap( {
-      case ab: AnonBox => ab.getContents()
-      case bwp: BoxWithProps => if (bwp.displayOuter == "block") {
-        Vector(new BlockContent (bwp) {
-          def getFormattingContext() = Some(applicableFormattingContext)
-          def layout(lc: LayoutConstraints): Unit = {
-            applicableFormattingContext.innerLayout(this, lc)
-          }
-        })
-      } else {
-        bwp.getContents()
-      }
-    })
-    /*
-    if (displayOuter == "block") {
-      Vector(new BlockContent (this) {
-        def layout(vwProps: ViewPortProps): Unit = {
-          applicableFormattingContext.layout(BoxWithProps.this, vwProps)
-        }
-      })
-    } else {
-      boxyDomChildren.flatMap(_.getContents())
-    }
-    */
-  }
-    */
 
   private var absChildren: Vector[BoxTreeNode] = Vector()
   def getAbsChildren: Vector[BoxTreeNode] = absChildren
@@ -294,38 +265,6 @@ class BoxWithProps(
 
   def paint(g: Graphics2D): Unit = {
     ???
-    /*
-
-    if (config.paintDebugLevel > 0) println("Painting, ", debugId)
-    val gt = g.create().asInstanceOf[Graphics2D]
-    gt.translate(b.offsetX + b.renderOffsetX, b.offsetY + b.renderOffsetY)
-
-    val bgColor = backgroundColor.specified
-    b.paint(gt, bgColor)
-
-    val gtc = gt.create().asInstanceOf[Graphics2D]
-    val currClipBounds = gtc.getClipBounds
-    gtc.translate(b.contentOffsetX, b.contentOffsetY)
-    val clipBoundWidth = if (b.overflowX == "hidden" || b.overflowX == "scroll") b.contentWidth else currClipBounds.width
-    val clipBoundHeight = if (b.overflowX == "hidden" || b.overflowX == "scroll") b.contentHeight else currClipBounds.height
-    gtc.clipRect(currClipBounds.x, currClipBounds.y, clipBoundWidth, clipBoundHeight)
-
-    // miniContext.paint(gtc)
-    if (isReplaced && positionProp == "absolute") {
-      // println("Directly painting box")
-      // b.paint(gtc, bgColor)
-    } else {
-      if (inlineMode) {
-        inlinePseudoContext.paint(gtc)
-      } else {
-        boxyInflowChildren.foreach(_.paint(gtc))
-      }
-      absChildren.foreach(_.paint(gt))
-    }
-
-    gtc.dispose()
-    gt.dispose()
-    */
   }
 
   val blockLevel = displayOuter == "block"
@@ -560,30 +499,6 @@ sealed trait ContainingAreaType
 case object WholeArea extends ContainingAreaType
 case object PaddingArea extends ContainingAreaType
 case object ContentArea extends ContainingAreaType
-
-/*
-case class ContainingBlockRef(areaType: ContainingAreaType, cb: HasBox) {
-  def width = cb.b.contentWidth
-  def height = cb.b.contentHeight
-
-  def addAsAbsoluteChild(btn: BoxTreeNode):Unit = {
-    cb match {
-      case b:HasAbsChildren => b.appendAbsChild(btn)
-      case _ => println("TODO: Handle adding abs child to unknown node")
-    }
-  }
-}
-*/
-
-class InitialContainingBlock extends HasBox with HasAbsChildren {
-  val b: Box = new Box()
-  private var rootBox: BoxWithProps = null
-  def setRootBox(box: BoxWithProps) = {
-    rootBox = box
-  }
-  def appendAbsChild(c: BoxTreeNode): Unit = {rootBox.appendAbsChild(c)}
-  def getAbsChildren: Vector[BoxTreeNode] = rootBox.getAbsChildren
-}
 
 object BoxUtil {
 /*
