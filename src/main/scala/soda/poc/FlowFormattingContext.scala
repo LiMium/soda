@@ -306,6 +306,7 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
       case AbsLength(pixels) => Some(pixels.toInt)
       case ParentRelLength(scale) => Some(if (c.parent != null) (c.containingHeight*scale).toInt else 0)
       case AutoLength => None
+      case NoneLength => None
       case x => println("TODO height: " + x); None
     }
     heightDefinedOpt foreach {hd => c.box.contentHeight = hd}
