@@ -5,7 +5,24 @@ import java.awt.Graphics2D
 import soda.layout.ViewPortProps
 import java.awt.Color
 
-class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) {
+sealed trait Queued {
+  private var queue: Vector[InlineRenderable] = Vector.empty
+
+  protected def appendToQueue(ir: InlineRenderable) = {
+    queue :+= ir
+  }
+
+  protected def flushQueue() = {
+    while (queue.nonEmpty) {
+      addImpl(queue.head)
+      queue = queue.drop(1)
+    }
+  }
+
+  protected def addImpl(ir: InlineRenderable): Unit
+}
+
+class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Queued {
   var renderables = Vector[InlineRenderable]()
   var height = 0
   var width = 0
@@ -30,6 +47,15 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) {
   }
 
   def add(ir: InlineRenderable) = {
+    if (ir.isSpace || ir.isBreak) {
+      appendToQueue(ir)
+    } else {
+      flushQueue()
+      addImpl(ir)
+    }
+  }
+
+  protected def addImpl(ir: InlineRenderable): Unit = {
     if (!shouldIgnore(ir)) {
       ir.box.offsetX = width
 
@@ -68,37 +94,46 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) {
   def getCurrPosX = width
 }
 
-class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[Content] {
+class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[Content] with Queued {
   val maxLineWidth = lc.widthConstraint.avl
+
   override def add(c: Content): Unit = {
     c match {
       case ir: InlineRenderable =>
-        Util.logLayout(2, s"adding ir $ir est dim ${ir.props.width}x${ir.props.height}", ir.level)
-
-        if (ir.isBreak) {
-          startNewLine()
+        if (ir.isSpace || ir.isBreak) {
+          appendToQueue(ir)
         } else {
-          if (ir.getFormattingContext() != null) {
-            if (currLine == null) {
-              startNewLine()
-            }
-            val remWidth = maxLineWidth - currLine.width
-            val newWc = lc.widthConstraint match {
-              case FitAvailable(avl) => FitAvailable(remWidth)
-              case FitToShrink(avl) => FitToShrink(remWidth)
-            }
-            val newLC = lc.copy(widthConstraint = newWc)
-            ir.getFormattingContext().innerLayout(ir, newLC)
-          }
-          if (currLine == null) {
-            startNewLine()
-          } else if (currLine.width != 0 && !currLine.willFit(ir)) {
-            startNewLine()
-          }
-          currLine.add(ir)
+          flushQueue()
+          addImpl(ir)
         }
-
       case bc: BlockContent => Util.warnln("Unexpected block content in inline mini context"); ???
+    }
+  }
+
+  protected def addImpl(ir: InlineRenderable) = {
+    Util.logLayout(2, s"adding ir $ir est dim ${ir.props.width}x${ir.props.height}", ir.level)
+
+    if (ir.isBreak) {
+      startNewLine()
+    } else {
+      if (ir.getFormattingContext() != null) {
+        if (currLine == null) {
+          startNewLine()
+        }
+        val remWidth = maxLineWidth - currLine.width
+        val newWc = lc.widthConstraint match {
+          case FitAvailable(avl) => FitAvailable(remWidth)
+          case FitToShrink(avl) => FitToShrink(remWidth)
+        }
+        val newLC = lc.copy(widthConstraint = newWc)
+        ir.getFormattingContext().innerLayout(ir, newLC)
+      }
+      if (currLine == null) {
+        startNewLine()
+      } else if (currLine.width != 0 && !currLine.willFit(ir)) {
+        startNewLine()
+      }
+      currLine.add(ir)
     }
   }
 
