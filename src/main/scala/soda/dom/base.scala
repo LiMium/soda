@@ -1,24 +1,17 @@
 package soda.dom
 
-import soda.layout.Renderable
-import soda.layout.RBox
-import soda.layout.RWord
 import org.w3c.dom.Node
 import org.w3c.dom.Element
 import org.w3c.dom.Text
 import org.w3c.dom.Document
 import cz.vutbr.web.domassign.StyleMap
-import soda.layout.RDocument
 import soda.utils.Positioned
 import org.w3c.dom.NodeList
-import soda.layout.Renderable
-import soda.layout.RImage
 import javax.imageio.ImageIO
 import java.net.URL
 import cz.vutbr.web.css.StyleSheet
 import cz.vutbr.web.domassign.AnalyzerUtil
 import cz.vutbr.web.css.MediaSpec
-import soda.layout.DomRenderable
 
 class NodeListImpl(seq: Vector[Node]) extends NodeList {
   def item(index: Int) = seq(index)
@@ -31,10 +24,6 @@ sealed trait RenderableNode extends Node {
 
   var parentNode: RenderableNode = null
   val ownerDoc: Document
-
-  def getReplaceableRenderables(parent: DomRenderable): Seq[Renderable]
-
-  def positionedChildren = Positioned(children.iterator)
 
   def walkAllElements(): Vector[RenderableElement] = {
     val elemChildren = children.flatMap({case re: RenderableElement => Some(re); case _ => None}).toVector
@@ -125,17 +114,6 @@ object RenderableDocument {
 class RenderableDocument(tag: String, uri: String) extends Document with RenderableNode {
   val ownerDoc = this
 
-  def getReplaceableRenderables(parent: DomRenderable): Seq[Renderable] = Seq.empty
-
-  def prepareRenderTree(styleSheets: java.util.List[StyleSheet]): Renderable = {
-    val classifiedRules = AnalyzerUtil.getClassifiedRules(styleSheets, new MediaSpec("screen"))
-    val result = new RDocument()
-    children.foreach { c =>
-      result.addNode(c, classifiedRules, None)
-    }
-    result
-  }
-
   // Members declared in org.w3c.dom.Document
   def adoptNode(x$1: org.w3c.dom.Node): org.w3c.dom.Node = ???
   def createAttribute(x$1: String): org.w3c.dom.Attr = ???
@@ -186,22 +164,6 @@ object RenderableElement {
 }
 
 class RenderableElement(val ownerDoc: Document, val tag: String, attributes: Map[String, String], val isRootElem: Boolean) extends Element with RenderableNode {
-  def getReplaceableRenderables(parent: DomRenderable): Seq[Renderable] = {
-    if (tag == "img") {
-      attributes.get("src").flatMap{src =>
-        val baseUrl = getBaseURI()
-        val imgUrl = new URL(new URL(baseUrl), src)
-        val img = ImageIO.read(imgUrl)
-        if (img != null) {
-          Some(new RImage(parent, this, img))
-        } else {
-          None
-        }
-      }.toSeq
-    } else {
-      Seq.empty
-    }
-  }
 
   // Members declared in org.w3c.dom.Element
   def getAttribute(name: String): String = attributes.getOrElse(name, null)
@@ -246,8 +208,6 @@ class RenderableElement(val ownerDoc: Document, val tag: String, attributes: Map
 class RenderableText(val text: String) extends Text with RenderableNode {
   val ownerDoc = null
 
-  def getReplaceableRenderables(parent: DomRenderable): Seq[Renderable] = Seq.empty
-
   override def toString = {
     text
   }
@@ -291,7 +251,4 @@ class RenderableAttribute(val ownerDoc: Document, name: String, value: String) e
   // Members declared in org.w3c.dom.Node
   def getNodeName(): String = ???
   def getNodeType(): Short = ???
-
-  // Members declared in soda.dom.RenderableNode
-  def getReplaceableRenderables(parent: soda.layout.DomRenderable): Seq[soda.layout.Renderable] = ???
 }

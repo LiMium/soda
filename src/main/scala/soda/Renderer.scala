@@ -5,7 +5,6 @@ import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 
 import soda.dom.RenderableDocument
-import soda.layout.RenderCtxt
 
 object Renderer {
   def render(url: java.net.URL, userCSS: String) = {
@@ -19,7 +18,6 @@ object Renderer {
     g.clipRect(0, 0, width, height)
 
     val g2 = g.asInstanceOf[Graphics2D]
-    // renderOld()
     renderNew(g, url, width, height, userCSS)
 
     g.dispose()
@@ -38,20 +36,6 @@ object Renderer {
       rootBoxOpt foreach {r =>
         r.paintAll(g2)
       }
-    }
-
-    def renderOld(g2: Graphics2D, url: java.net.URL, width: Int, height: Int, userCSS: String) = {
-      import scala.jdk.CollectionConverters._
-      import soda.utils.Util
-      import soda.analysis.Analysis
-
-      val dom = Util.parse(url)
-
-      val styleSheets = Analysis.getStyleSheets(dom, userCSS, url)
-      val ctxt = new RenderCtxt()
-      val renderTreeRoot = dom.prepareRenderTree(styleSheets.asJava)
-      renderTreeRoot.layout(width, height)
-      renderTreeRoot.paint(g2, ctxt)
     }
 
 }
