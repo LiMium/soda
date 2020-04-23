@@ -25,17 +25,16 @@ object Renderer {
     outImg
   }
 
-    def renderNew(g2: Graphics2D, url: java.net.URL, width: Int, height: Int, userCSS: String) = {
-      import soda.poc._
-      import soda.analysis.Analyser
-      import soda.layout.ViewPortProps
+  def renderNew(g2: Graphics2D, url: java.net.URL, width: Int, height: Int, userCSS: String) = {
+    import soda.poc._
+    import soda.analysis.Analyser
+    import soda.layout.ViewPortProps
 
-      val decoratedDOM = Analyser.process(url)
-      val vwProps = ViewPortProps(width, height, 96, g2)
-      val rootBoxOpt = Layout.process(decoratedDOM, vwProps)
-      rootBoxOpt foreach {r =>
-        r.paintAll(g2)
-      }
+    val decoratedDOM = Analyser.process(url)
+    val vwProps = ViewPortProps(width, height, 96, g2)
+    val rootBoxOpt = Layout.process(decoratedDOM, vwProps)
+    rootBoxOpt foreach {r =>
+      r.paintAll(g2)
     }
-
+  }
 }
