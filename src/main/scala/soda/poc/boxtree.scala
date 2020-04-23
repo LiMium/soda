@@ -2,9 +2,6 @@ package soda.poc
 
 import java.awt.Graphics2D
 import java.awt.Color
-import org.w3c.dom.Node
-import soda.analysis.DecoratedNode
-import soda.analysis.DocumentNode
 import soda.analysis.ElementNode
 import soda.analysis.TextNode
 import soda.layout.ViewPortProps

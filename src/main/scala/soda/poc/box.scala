@@ -2,7 +2,6 @@ package soda.poc
 
 import java.awt.Graphics2D
 import java.awt.Color
-import java.awt.image.BufferedImage
 
 class Sides[T](initial: => T) {
   var top: T = initial
