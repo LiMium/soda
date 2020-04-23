@@ -55,8 +55,6 @@ class Box {
   val marginThickness = new SidesInt
   var paddingThickness = new SidesInt
 
-  val startPos = new Position
-
   var offsetX = 0
   var offsetY = 0
 
@@ -68,10 +66,7 @@ class Box {
 
   var contentWidth = 0
   var contentHeight = 0
-  // var shrinkToFit = false
   var visibility: Boolean = true
-  // var overflowX: String = "visible"
-  // var overflowY: String = "visible"
 
   def paddingBoxOffsetX = marginThickness.left + border.left.thickness
   def paddingBoxOffsetY = marginThickness.top + border.top.thickness
@@ -103,10 +98,6 @@ class Box {
     }
 
     if (visibility) {
-      // g.setColor(backgroundColor.actual.get)
-      // val borderWidth = border.left.actual.get + border.right.actual.get
-      // val paddingWidth = padding.left.actual.get + padding.right.actual.get
-      //
       if (bgColor != null) {
         g.setColor(bgColor)
         g.fillRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
