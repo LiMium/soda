@@ -97,8 +97,7 @@ object Layout {
     if (displayComputed == Some("none")) {
       None
     } else {
-      val box = new Box()
-      val boxWithProps = new BoxWithProps(box, en, domParentBox)
+      val boxWithProps = new BoxWithProps(en, domParentBox)
       val children = en.children.flatMap(generateBoxNode(_, boxWithProps))
 
       boxWithProps.boxyDomChildren = children

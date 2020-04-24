@@ -61,7 +61,6 @@ class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends BoxTreeNode {
 
 // Root box will have parentBlock == None
 class BoxWithProps(
-  val b: Box,
   val elemNode: ElementNode,
   val domParentBox: Option[BoxWithProps]
   ) extends BoxTreeNode {
@@ -138,11 +137,12 @@ class BoxWithProps(
 
   // Level 3 properties
   val size = new Size()
+  val border: Sides[Border] = new Sides[Border](new Border)
 
   def computeBorderProps(vwProps: ViewPortProps) = {
     val nd = elemNode.nd
     val currColor = colorProp.computed
-    b.border.forEach{(name, side) =>
+    border.forEach{(name, side) =>
       val colorKey = s"border-$name-color"
       val styleKey = s"border-$name-style"
       val thickKey = s"border-$name-width"
@@ -245,7 +245,6 @@ class BoxWithProps(
   override def toString = debugId
 
   def getContents(aParent: Content, vwProps: ViewPortProps): Vector[Content] = {
-    val border = b.border
     val paddingThickness = new Sides[LengthSpec](NoneLength)
     computePaddings(paddingThickness, vwProps)
 
