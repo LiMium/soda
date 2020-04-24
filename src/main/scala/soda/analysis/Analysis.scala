@@ -139,7 +139,8 @@ class DocumentNode(val doc: RenderableDocument) extends DecoratedNode {
 }
 
 class ElementNode(val elem: RenderableElement, val nd: NodeData) extends DecoratedNode {
-  override def toString = elem.getTagName() + "\n" + children.map(_.toString).mkString("\n")
+  // override def toString = elem.getTagName() + "\n" + children.map(_.toString).mkString("\n")
+  override def toString = elem.toString
 
   // Level 1 Properties
   val displayProp = new L1StringProp("display", "inline")
