@@ -19,6 +19,11 @@ sealed trait Queued {
     }
   }
 
+  /**
+    * This method should actually add the ir, and hence, not call appendToQueue()
+    *
+    * @param ir
+    */
   protected def addImpl(ir: InlineRenderable): Unit
 }
 
