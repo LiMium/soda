@@ -38,7 +38,6 @@ class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends BoxTreeNode {
     words.map(w => new InlineWordRenderable(parent, w, creator.b.visibility, creator.colorProp, creator.fontProp)).toVector
   }
 
-  val b: Box = new Box
   def initProps(vwProps: ViewPortProps):Unit = {}
 
   private def split(s: String) = {
