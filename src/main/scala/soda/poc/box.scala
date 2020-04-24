@@ -65,7 +65,6 @@ class Box {
 
   var contentWidth = 0
   var contentHeight = 0
-  var visibility: Boolean = true
 
   def paddingBoxOffsetX = marginThickness.left + border.left.thickness
   def paddingBoxOffsetY = marginThickness.top + border.top.thickness
@@ -96,15 +95,13 @@ class Box {
       g.drawRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
     }
 
-    if (visibility) {
-      if (bgColor != null) {
-        g.setColor(bgColor)
-        g.fillRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
-      }
-
-      val borderRect = Rect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
-      paintBorder(g, borderRect)
+    if (bgColor != null) {
+      g.setColor(bgColor)
+      g.fillRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
     }
+
+    val borderRect = Rect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
+    paintBorder(g, borderRect)
   }
 
   private def paintBorder(g: Graphics2D, br: Rect) = {

@@ -201,7 +201,7 @@ class BlockMiniContext(c: Content, fc: FormattingContext, lc: LayoutConstraints)
   }
 
   def add(ctx: MiniContext[Content]): Unit = {
-    val bc = new BlockContent(c, None, "anon block wrapper for inline mini context", new RenderProps(null, "visible", "visible")) {
+    val bc = new BlockContent(c, None, "anon block wrapper for inline mini context", new RenderProps(null, "visible", "visible", true)) {
       val props = new LayoutProps(
         "block", "flow", "static",
         new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,

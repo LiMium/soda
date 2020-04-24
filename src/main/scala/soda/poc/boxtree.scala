@@ -35,7 +35,7 @@ case object GridContainerBoxType extends InnerBoxType
 class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends BoxTreeNode {
   def getContents(parent: Content, vwProps:ViewPortProps): Vector[Content] = {
     val words = getWords
-    words.map(w => new InlineWordRenderable(parent, w, creator.b.visibility, creator.colorProp, creator.fontProp)).toVector
+    words.map(w => new InlineWordRenderable(parent, w, creator.visibility, creator.colorProp, creator.fontProp)).toVector
   }
 
   def initProps(vwProps: ViewPortProps):Unit = {}
@@ -169,6 +169,7 @@ class BoxWithProps(
 
   var overflowX = "visible"
   var overflowY = "visible"
+  var visibility = true
 
   def computeSelfL2Props(vwProps: ViewPortProps) = {
     val nd = elemNode.nd
@@ -178,7 +179,7 @@ class BoxWithProps(
     fontProp.init(nd, domParentBox.map(_.fontProp), vwProps)
     computeBorderProps(vwProps)
     backgroundColor.init(nd, null)
-    b.visibility = parseVisibility()
+    visibility = parseVisibility()
     overflowX = Property.getSpec(nd, "overflow-x").getOrElse("visible")
     overflowY = Property.getSpec(nd, "overflow-y").getOrElse("visible")
 
@@ -191,7 +192,7 @@ class BoxWithProps(
       case "hidden" => false
       case "collapse" => false
       case _ => true
-    } getOrElse (domParentBox.map(_.b.visibility).getOrElse(true))
+    } getOrElse (domParentBox.map(_.visibility).getOrElse(true))
   }
 
   def computeL2Props(vwProps: ViewPortProps):Unit = {
@@ -266,7 +267,7 @@ class BoxWithProps(
     val compMinWidth = resolveLengthForLayout(size.minWidth.specified)
     val compMaxWidth = resolveLengthForLayout(size.maxWidth.specified)
 
-    val renderPropsComputed = new RenderProps(backgroundColor.computed, overflowX, overflowY)
+    val renderPropsComputed = new RenderProps(backgroundColor.computed, overflowX, overflowY, visibility)
     if (isReplaced) {
       if (displayOuter == "block") {
         if (tag == "img") {

@@ -25,6 +25,7 @@ class RenderProps (
   val bgColor: Color,
   val overflowX: String,
   val overflowY: String,
+  val visibility: Boolean
 )
 
 case class ContainingBlockRef(areaType: ContainingAreaType, cb: Content) {
@@ -81,12 +82,16 @@ sealed trait Content {
   def paintAll(g: Graphics2D): Unit = {
     val g2 = g.create().asInstanceOf[Graphics2D]
     g2.translate(box.paintOffsetX, box.paintOffsetY)
-    box.paint(g2, renderProps.bgColor);
+    if (renderProps.visibility) {
+      box.paint(g2, renderProps.bgColor);
+    }
 
     {
       val g3 = g2.create().asInstanceOf[Graphics2D]
       g3.translate(box.contentOffsetX, box.contentOffsetY)
-      paintSelf(g3)
+      if (renderProps.visibility) {
+        paintSelf(g3)
+      }
       if (miniContext != null) {
         clip(g3)
         miniContext.paint(g3)
@@ -205,7 +210,7 @@ final class InlineBreak(val parent: Content) extends InlineRenderable {
     NoneLength,
     ContentUtil.emptyOffsets)
 
-  val renderProps: RenderProps = new RenderProps(null, "visible", "visible")
+  val renderProps: RenderProps = new RenderProps(null, "visible", "visible", true)
 }
 
 final class InlineWordRenderable(val parent: Content, word: String, visibility: Boolean, colorProp: ColorProp, fontProp: FontProp) extends InlineRenderable {
@@ -230,7 +235,7 @@ final class InlineWordRenderable(val parent: Content, word: String, visibility: 
     estHeight,
     ContentUtil.emptyOffsets)
 
-  val renderProps: RenderProps = new RenderProps(null, "visible", "visible")
+  val renderProps: RenderProps = new RenderProps(null, "visible", "visible", visibility)
 }
 
 object ContentUtil {
