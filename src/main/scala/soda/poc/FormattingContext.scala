@@ -21,13 +21,13 @@ final class SimpleReplacedFormattingContext extends FormattingContext {
   def innerLayout(c: Content, constraints: LayoutConstraints): Unit = {
     val replacedWidth = c.props.width match {
       case AbsLength(pixels) => pixels.toInt
-      case ParentRelLength(scale) => Util.warnln("unhandled: " + scale); constraints.widthConstraint.avl
-      case x => Util.warnln("unhandled:" + x);???
+      case ParentRelLength(scale) => (c.containingWidth*scale).toInt
+      case x => Util.warnln("unhandled width for replaced elem:" + x);???
     }
     val replacedHeight = c.props.height match {
       case AbsLength(pixels) => pixels.toInt
-      case ParentRelLength(scale) => Util.warnln("unhandled: " + scale);constraints.heightConstraint.avl
-      case x => Util.warnln("unhandled:" + x);???
+      case ParentRelLength(scale) => (c.containingHeight*scale).toInt
+      case x => Util.warnln("unhandled height for replaced elem:" + x);???
     }
     c.box.contentWidth = replacedWidth
     c.box.contentHeight = replacedHeight
