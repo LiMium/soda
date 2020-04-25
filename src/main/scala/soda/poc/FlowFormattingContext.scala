@@ -311,8 +311,8 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
       case _ => None
     }
     */
-    val parentWidth = if (c.parent != null) c.parent.box.contentWidth else 0
-    val cWidth = resolveLength(c.props.width, parentWidth)
+    val containingWidth = c.containingWidth
+    val cWidth = resolveLength(c.props.width, containingWidth)
 
     val cMarginLeft = marginTranslate(c.props.margin.left)
     val cMarginRight = marginTranslate(c.props.margin.right)
@@ -329,8 +329,8 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
 
     // println(c)
     // println(s"  Tentative width: $tentativeWidth, minWidth: ${c.props.compMinWidth} maxWidth: ${c.props.compMaxWidth}")
-    val minWidth = resolveLength(c.props.compMinWidth, parentWidth).getOrElse(0)
-    val maxWidth = resolveLength(c.props.compMaxWidth, parentWidth)
+    val minWidth = resolveLength(c.props.compMinWidth, containingWidth).getOrElse(0)
+    val maxWidth = resolveLength(c.props.compMaxWidth, containingWidth)
     val (width, _) = constrainWidth(tentativeWidth, minWidth, maxWidth)
     // println(s"  width: $width")
 
