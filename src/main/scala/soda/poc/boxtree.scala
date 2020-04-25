@@ -217,20 +217,6 @@ class BoxWithProps(
     }
   }
 
-  private def resolveLength(lengthSpec: LengthSpec, parentLength: Float) = {
-    lengthSpec match {
-      case AbsLength(pxs) => pxs.toInt
-      case ParentRelLength(pct) => (pct * parentLength).toInt
-      case frl: FontRelLength => frl.compute(fontProp).toInt
-      case _ => 0
-    }
-  }
-
-
-  private def findRelativeOffset(factor:Int, parentLength: Float, prop: String, vwProps: ViewPortProps) = {
-    Property.getSpec(elemNode.nd, prop).map(LengthProp.parseSpec(_)).map(resolveLength(_, parentLength)).map(_ * factor)
-  }
-
   private def getComputedPadding(ls: LengthSpec, vwProps: ViewPortProps) = {
     resolveLengthForLayout(ls)
   }
