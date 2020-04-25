@@ -17,15 +17,19 @@ trait FormattingContext {
 
 final class SimpleReplacedFormattingContext extends FormattingContext {
 
-  def innerLayout(c: Content, constraints: LayoutConstraints): Unit = {
-    val replacedWidth = c.props.width match {
+  private def resolveWidth(c: Content) = {
+    c.props.width match {
       case AbsLength(pixels) => pixels.toInt
-      case ParentRelLength(scale) => (c.containingWidth*scale).toInt
+      case PercentLength(scale) => (c.containingWidth*scale).toInt
       case x => Util.warnln("unhandled width for replaced elem:" + x);???
     }
+  }
+
+  def innerLayout(c: Content, constraints: LayoutConstraints): Unit = {
+    val replacedWidth = resolveWidth(c)
     val replacedHeight = c.props.height match {
       case AbsLength(pixels) => pixels.toInt
-      case ParentRelLength(scale) => (c.containingHeight*scale).toInt
+      case PercentLength(scale) => (c.containingHeight*scale).toInt
       case x => Util.warnln("unhandled height for replaced elem:" + x);???
     }
     c.box.contentWidth = replacedWidth

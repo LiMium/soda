@@ -46,7 +46,7 @@ case class FontRelLength(scale: Float, measure: String) extends LengthSpec {
   }
 }
 
-case class ParentRelLength(scale: Float) extends LengthSpec
+case class PercentLength(scale: Float) extends LengthSpec
 
 // TODO: With dotty we could split the border length into a different type hierarchy using unions
 case object MediumLength extends LengthSpec
@@ -67,7 +67,7 @@ object LengthProp {
       } else if (specStr.endsWith("px")) {
         AbsLength(specStr.dropRight(2).toFloat)
       } else if (specStr.endsWith("%")) {
-        ParentRelLength(specStr.dropRight(1).toFloat / 100)
+        PercentLength(specStr.dropRight(1).toFloat / 100)
       } else if (specStr.endsWith("in")) {
         // TODO: For now we assume a low DPI device and hence 1 inch == 96 pixels
         // This can be modified later to return a different class which can be resolved later into pixels

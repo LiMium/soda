@@ -35,7 +35,7 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
   def willFit(ir: InlineRenderable) = {
     val requiredSpace = ir.props.width match {
       case AbsLength(pixels) => pixels.toInt
-      case ParentRelLength(scale) => (scale * maxWidth).toInt
+      case PercentLength(scale) => (scale * maxWidth).toInt
       case NoneLength => 0
       case AutoLength => maxWidth
       case x => println(x); ???
@@ -73,7 +73,7 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
 
       val iWidth = ir.props.width match {
         case AbsLength(pixels) => pixels.toInt
-        case ParentRelLength(scale) => (scale * maxWidth).toInt
+        case PercentLength(scale) => (scale * maxWidth).toInt
         case AutoLength => maxWidth
         case NoneLength => 0
         case x => soda.utils.Util.warnln("TODO: Inline width " + x); 0
@@ -282,11 +282,11 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     (widthMaxChecked, widthMaxChecked != tentativeWidth)
   }
 
-  def resolveLength(l: LengthSpec, parentLength: Float) = {
+  def resolveLength(l: LengthSpec, containerLength: Float) = {
     l match {
       case AbsLength(pixels) => Some(pixels.toInt)
       // case ParentRelLength(scale) =>  Some(if (c.parent != null) (c.parent.box.contentWidth*scale).toInt else 0)
-      case ParentRelLength(scale) =>  Some((scale * parentLength).toInt)
+      case PercentLength(scale) =>  Some((scale * containerLength).toInt)
       case _ => None
     }
   }
@@ -344,7 +344,7 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
 
     val heightDefinedOpt = c.props.height match {
       case AbsLength(pixels) => Some(pixels.toInt)
-      case ParentRelLength(scale) => Some(if (c.parent != null) (c.containingHeight*scale).toInt else 0)
+      case PercentLength(scale) => Some(if (c.parent != null) (c.containingHeight*scale).toInt else 0)
       case AutoLength => None
       case NoneLength => None
       case x => println("TODO height: " + x); None

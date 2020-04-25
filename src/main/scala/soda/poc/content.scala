@@ -119,7 +119,7 @@ sealed trait Content {
   private def resolveLength(lengthSpec: LengthSpec, containingBlockLength: Float) = {
     lengthSpec match {
       case AbsLength(pxs) => Some(pxs.toInt)
-      case ParentRelLength(pct) => Some((pct * containingBlockLength).toInt)
+      case PercentLength(pct) => Some((pct * containingBlockLength).toInt)
       case AutoLength => None
       case x => Util.warnln("Not handled: " + x); Some(0)
     }
