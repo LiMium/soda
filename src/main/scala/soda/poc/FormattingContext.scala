@@ -13,7 +13,6 @@ trait FormattingContext {
     */
   def innerLayout(c: Content, constraints: LayoutConstraints): Unit
 
-  // def getFlowBoxType(displayOuter: String): InnerBoxType = BlockContainerBoxType
 }
 
 final class SimpleReplacedFormattingContext extends FormattingContext {
@@ -35,5 +34,4 @@ final class SimpleReplacedFormattingContext extends FormattingContext {
     c.miniContext = EmptyMiniContext
   }
 
-  // override def getFlowBoxType(displayOuter: String): InnerBoxType = {BlockContainerBoxType}
 }
