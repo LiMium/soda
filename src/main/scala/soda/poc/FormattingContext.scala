@@ -2,6 +2,8 @@ package soda.poc
 
 import soda.utils.Util
 
+case class PrefWidths(prefMinWidth: Int, prefWidth: Int)
+
 trait FormattingContext {
   /**
     * Inner layout of content `c` involves two things:
@@ -13,10 +15,15 @@ trait FormattingContext {
     */
   def innerLayout(c: Content, constraints: LayoutConstraints): Unit
 
+  /**
+    * Compute the `preferred min width` and `preferred width` as per section 10.3.5 of CSS 2.2
+    *
+    * These are useful for shrink-fit calculation
+    */
+  def preferredWidths(c: Content): PrefWidths
 }
 
 final class SimpleReplacedFormattingContext extends FormattingContext {
-
   private def resolveWidth(c: Content) = {
     c.props.width match {
       case AbsLength(pixels) => pixels.toInt
@@ -34,8 +41,11 @@ final class SimpleReplacedFormattingContext extends FormattingContext {
     }
     c.box.contentWidth = replacedWidth
     c.box.contentHeight = replacedHeight
-    // println(s"replaced width ${c.box.contentWidth} height: ${c.box.contentHeight}")
     c.miniContext = EmptyMiniContext
   }
 
+  def preferredWidths(c: Content): PrefWidths = {
+    val w = resolveWidth(c)
+    PrefWidths(w, w)
+  }
 }

@@ -6,7 +6,7 @@ import soda.layout.ViewPortProps
 import java.awt.Color
 
 sealed trait Queued {
-  private var queue: Vector[InlineRenderable] = Vector.empty
+  protected var queue: Vector[InlineRenderable] = Vector.empty
 
   protected def appendToQueue(ir: InlineRenderable) = {
     queue :+= ir
@@ -33,13 +33,7 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
   var width = 0
 
   def willFit(ir: InlineRenderable) = {
-    val requiredSpace = ir.props.width match {
-      case AbsLength(pixels) => pixels.toInt
-      case PercentLength(scale) => (scale * maxWidth).toInt
-      case NoneLength => 0
-      case AutoLength => maxWidth
-      case x => println(x); ???
-    }
+    val requiredSpace = ir.box.marginBoxWidth + queue.map(_.box.marginBoxWidth).sum
     (requiredSpace + width) <= maxWidth
   }
 
@@ -71,32 +65,16 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
 
       ir.box.paddingThickness = ir.computePaddings()
 
-      val iWidth = ir.props.width match {
-        case AbsLength(pixels) => pixels.toInt
-        case PercentLength(scale) => (scale * maxWidth).toInt
-        case AutoLength => maxWidth
-        case NoneLength => 0
-        case x => soda.utils.Util.warnln("TODO: Inline width " + x); 0
-      }
-      val iHeightOpt = ir.props.height match {
-        case AbsLength(pixels) => Some(pixels.toInt)
-        case NoneLength => Some(0)
-        case AutoLength => None
-        case x => soda.utils.Util.warnln("TODO: Inline height " + x); Some(0)
-      }
-      ir.box.contentWidth = iWidth
-      iHeightOpt.foreach {iHeight =>
-        ir.box.contentHeight = iHeight
-      }
-
       height = math.max(height, ir.box.marginBoxHeight)
       width += ir.box.marginBoxWidth
-      if (config.layoutDebugLevel > 3) println(s"    ir pos (${ir.box.offsetX},${ir.box.offsetY})  dim $iWidth x ${ir.box.marginBoxHeight}")
+      if (config.layoutDebugLevel > 3) println(s"    ir pos (${ir.box.offsetX},${ir.box.offsetY})  dim ${ir.box.marginBoxWidth} x ${ir.box.marginBoxHeight}")
       renderables = renderables.appended(ir)
     }
   }
 
   def getCurrPosX = width
+
+  def remWidth = maxWidth - width
 }
 
 class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[Content] with Queued {
@@ -125,13 +103,31 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
         if (currLine == null) {
           startNewLine()
         }
-        val remWidth = maxLineWidth - currLine.width
         val newWc = lc.widthConstraint match {
-          case FitAvailable(avl) => FitAvailable(remWidth)
-          case FitToShrink(avl) => FitToShrink(remWidth)
+          case FitAvailable(avl) => FitAvailable(maxLineWidth)
+          case FitToShrink(avl) => FitToShrink(maxLineWidth)
         }
         val newLC = lc.copy(widthConstraint = newWc)
         ir.getFormattingContext().innerLayout(ir, newLC)
+      } else {
+        val iWidth = ir.props.width match {
+          case AbsLength(pixels) => pixels.toInt
+          case PercentLength(scale) => (scale * maxLineWidth).toInt
+          case AutoLength => maxLineWidth
+          case NoneLength => 0
+          case x => soda.utils.Util.warnln("TODO: Inline width " + x); 0
+        }
+        ir.box.contentWidth = iWidth
+
+        val iHeightOpt = ir.props.height match {
+          case AbsLength(pixels) => Some(pixels.toInt)
+          case NoneLength => Some(0)
+          case AutoLength => None
+          case x => soda.utils.Util.warnln("TODO: Inline height " + x); Some(0)
+        }
+        iHeightOpt.foreach {iHeight =>
+          ir.box.contentHeight = iHeight
+        }
       }
       if (currLine == null) {
         startNewLine()
@@ -304,13 +300,6 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     // TODO: The below subtraction could be done by the caller of innerLayout
     val avlWidth = lc.widthConstraint.avl - c.box.marginBoxSansContentWidth
 
-    /*
-    val cWidth = c.props.width match {
-      case AbsLength(pixels) => Some(pixels.toInt)
-      case ParentRelLength(scale) =>  Some(if (c.parent != null) (c.parent.box.contentWidth*scale).toInt else 0)
-      case _ => None
-    }
-    */
     val containingWidth = c.containingWidth
     val cWidth = resolveLength(c.props.width, containingWidth)
 
@@ -320,8 +309,12 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     val (tentativeWidth, marginLeft, marginRight) = if (c.props.displayOuter == "block" && Array("static", "relative").contains(c.props.position)) {
       computeWidthMargins(cWidth, avlWidth, cMarginLeft, cMarginRight)
     } else {
-      // TODO: This case needs a lot more work
-      (cWidth.getOrElse(avlWidth), cMarginLeft.getOrElse(0), cMarginRight.getOrElse(0))
+      val mLeft = cMarginLeft.getOrElse(0)
+      val mRight = cMarginRight.getOrElse(0)
+      val actualAvlWidth = avlWidth - (mLeft + mRight + c.box.paddingWidth + c.box.borderWidth)
+      val pw = preferredWidths(c)
+      val shrinkToFitWidth = math.min(math.max(pw.prefMinWidth, actualAvlWidth), pw.prefWidth)
+      (shrinkToFitWidth, mLeft, mRight)
     }
 
     c.box.marginThickness.left = marginLeft
@@ -397,9 +390,62 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
       val absLC = new LayoutConstraints(FitToShrink(abs.containingWidth), FitToShrink(abs.containingHeight), lc.vwProps)
       abs.getFormattingContext().innerLayout(abs, absLC)
     }
-    Util.logLayout(1, s"inner layout of $c, dim: ${c.box.marginBoxWidth} x ${c.box.marginBoxHeight}", c.level)
+    Util.logLayout(1, s"done inner layout of $c, dim: ${c.box.marginBoxWidth} x ${c.box.marginBoxHeight}", c.level)
+  }
+
+  def preferredWidths(c: Content): PrefWidths = {
+    val rwOpt = resolveLength(c.props.width, c.containingWidth)
+    val pwResult = rwOpt.map(rw => PrefWidths(rw, rw)).getOrElse({
+      var prefMinWidth = 0
+      var prefWidth = 0
+      var currLinePrefWidth = 0
+
+      def endLine() = {
+        if (currLinePrefWidth > prefWidth) {
+          prefWidth = currLinePrefWidth
+        }
+        currLinePrefWidth = 0
+      }
+
+      c.getSubContent().foreach(sc => {
+        sc match {
+          case ir: InlineRenderable =>
+            if (ir.isBreak) {
+              endLine()
+            } else {
+              val irFC = ir.getFormattingContext()
+              val pw = if (irFC == null) {
+                ir.props.width match {
+                  case AbsLength(pixels) => PrefWidths(pixels.toInt, pixels.toInt)
+                  case _ => ???
+                }
+              } else {
+                irFC.preferredWidths(ir)
+              }
+              prefWidth += pw.prefWidth
+              if (pw.prefMinWidth > prefMinWidth) {
+                prefMinWidth = pw.prefMinWidth
+              }
+            }
+          case bc: BlockContent =>
+            endLine()
+            val pw = bc.getFormattingContext().preferredWidths(bc)
+            if (pw.prefWidth > prefWidth) {
+              prefWidth = pw.prefWidth
+            }
+            if (pw.prefMinWidth > prefMinWidth) {
+              prefMinWidth = pw.prefMinWidth
+            }
+        }
+      })
+      endLine()
+
+      PrefWidths(prefMinWidth, prefWidth)
+    })
+    pwResult
   }
 }
+
 /*
 
 final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContext {
