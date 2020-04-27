@@ -235,6 +235,8 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     }
   }
 
+  private def natural(i: Int) = if (i < 0) 0 else i
+
   /**
     * compute widths and margins as per CSS2.2 section 10.3.3: Block-level non replaced elements
     *
@@ -245,8 +247,6 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     * @param compMarginRight
     */
   private def computeWidthMargins(widthOpt: Option[Int], avlWidth: Int, compMarginLeft: Option[Int], compMarginRight: Option[Int]) = {
-    def natural(i: Int) = if (i < 0) 0 else i
-
     widthOpt match {
       case None =>
           val mLeft = compMarginLeft.getOrElse(0)
