@@ -281,7 +281,6 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
   def resolveLength(l: LengthSpec, containerLength: Float) = {
     l match {
       case AbsLength(pixels) => Some(pixels.toInt)
-      // case ParentRelLength(scale) =>  Some(if (c.parent != null) (c.parent.box.contentWidth*scale).toInt else 0)
       case PercentLength(scale) =>  Some((scale * containerLength).toInt)
       case _ => None
     }
