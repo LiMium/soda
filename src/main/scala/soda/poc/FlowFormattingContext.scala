@@ -78,7 +78,7 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
 }
 
 class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[Content] with Queued {
-  val maxLineWidth = lc.widthConstraint.avl
+  private val maxLineWidth = lc.widthConstraint.avl
   private val newWc = FitToShrink(maxLineWidth)
 
   override def add(c: Content): Unit = {
@@ -135,8 +135,8 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
     }
   }
 
-  var lines = Vector[Line]()
-  var currLine:Line = null
+  private var lines = Vector[Line]()
+  private var currLine:Line = null
   private var currPosY = 0
 
   def getCurrPosXY(): (Int, Int) = {
