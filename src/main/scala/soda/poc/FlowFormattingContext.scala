@@ -79,6 +79,7 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
 
 class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[Content] with Queued {
   val maxLineWidth = lc.widthConstraint.avl
+  private val newWc = FitToShrink(maxLineWidth)
 
   override def add(c: Content): Unit = {
     c match {
@@ -102,10 +103,6 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
       if (ir.getFormattingContext() != null) {
         if (currLine == null) {
           startNewLine()
-        }
-        val newWc = lc.widthConstraint match {
-          case FitAvailable(avl) => FitAvailable(maxLineWidth)
-          case FitToShrink(avl) => FitToShrink(maxLineWidth)
         }
         val newLC = lc.copy(widthConstraint = newWc)
         ir.getFormattingContext().innerLayout(ir, newLC)
@@ -305,7 +302,12 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     val cMarginLeft = marginTranslate(c.props.margin.left)
     val cMarginRight = marginTranslate(c.props.margin.right)
 
-    val (tentativeWidth, marginLeft, marginRight) = if (c.props.displayOuter == "block" && Array("static", "relative").contains(c.props.position)) {
+    val isShrinkToFit = lc.widthConstraint match {
+      case FitAvailable(avl) => false
+      case FitToShrink(avl) => true
+    }
+
+    val (tentativeWidth, marginLeft, marginRight) = if (!isShrinkToFit) {
       computeWidthMargins(cWidth, avlWidth, cMarginLeft, cMarginRight)
     } else {
       val mLeft = cMarginLeft.getOrElse(0)
