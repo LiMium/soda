@@ -67,13 +67,6 @@ class BoxWithProps(
 
   val tag = elemNode.elem.tag
 
-  val id = elemNode.elem.getAttribute("id")
-  val classAttrib = elemNode.elem.getAttribute("class")
-  val debugId = "<" + tag + Option(id).map("#"+_).getOrElse("") + Option(classAttrib).map("."+_).getOrElse("") +">"
-
-  val isRootElem = elemNode.elem.isRootElem
-  val positionProp = elemNode.positionProp.get
-
   val img:BufferedImage = if (tag == "img") {
     val src = elemNode.elem.getAttribute("src")
     val baseUrl = elemNode.elem.getBaseURI()
@@ -82,6 +75,14 @@ class BoxWithProps(
   } else {
     null
   }
+
+
+  val id = elemNode.elem.getAttribute("id")
+  val classAttrib = elemNode.elem.getAttribute("class")
+  val debugId = "<" + tag + Option(id).map("#"+_).getOrElse("") + Option(classAttrib).map("."+_).getOrElse("") +">"
+
+  val isRootElem = elemNode.elem.isRootElem
+  val positionProp = elemNode.positionProp.get
 
   val isReplaced = (tag == "img") // && (b.img != null)
 
@@ -97,35 +98,29 @@ class BoxWithProps(
 
   private def getReplacedWidth:LengthSpec = {
     if (img != null) {
-      size.width.specified match {
-        case NoneLength => AbsLength(img.getWidth)
-        case AutoLength => AbsLength(img.getWidth)
-        case frl:FontRelLength => AbsLength(frl.compute(fontProp))
-        case x => x
-      }
+      size.width.specified
     } else NoneLength
   }
 
   private def getReplacedHeight:LengthSpec = {
     if (img != null) {
-      size.height.specified match {
-        case NoneLength => AbsLength(img.getHeight)
-        case AutoLength => AbsLength(img.getHeight)
-        case frl:FontRelLength => AbsLength(frl.compute(fontProp))
-        case x => x
-      }
+      size.height.specified
     } else NoneLength
   }
 
   // formatting context established by this box
   val formattingContext: Option[FormattingContext] = if (isRootElem || createsBFC) {
     if (isReplaced) {
-      Some(new SimpleReplacedFormattingContext)
+      Some(new SimpleReplacedFormattingContext(img))
     } else {
       Some(new FlowFormattingContext(this))
     }
   } else {
-    None
+    if (isReplaced) {
+      Some(new SimpleReplacedFormattingContext(img))
+    } else {
+      None
+    }
   }
 
   val applicableFormattingContext: FormattingContext = formattingContext.getOrElse(domParentBox.map(_.applicableFormattingContext).get)
@@ -276,6 +271,7 @@ class BoxWithProps(
           def paintSelf(g: Graphics2D): Unit = {
             g.drawImage(img, 0, 0, box.contentWidth, box.contentHeight, null)
           }
+          override def getFormattingContext():FormattingContext = applicableFormattingContext
           val props = new LayoutProps(
             "inline", "flow", positionProp,
             new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, paddingThickness,

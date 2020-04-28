@@ -1,6 +1,7 @@
 package soda.poc
 
 import soda.utils.Util
+import java.awt.image.BufferedImage
 
 case class PrefWidths(prefMinWidth: Int, prefWidth: Int)
 
@@ -23,29 +24,31 @@ trait FormattingContext {
   def preferredWidths(c: Content): PrefWidths
 }
 
-final class SimpleReplacedFormattingContext extends FormattingContext {
-  private def resolveWidth(c: Content) = {
-    c.props.width match {
-      case AbsLength(pixels) => pixels.toInt
-      case PercentLength(scale) => (c.containingWidth*scale).toInt
-      case x => Util.warnln("unhandled width for replaced elem:" + x);???
+// Currently requires an `img`, but can be abstracted later
+final class SimpleReplacedFormattingContext(img: BufferedImage) extends FormattingContext {
+  private val intrinsicWidth = { if (img != null) img.getWidth() else 0 }
+  private val intrinsicHeight = { if (img != null) img.getHeight() else 0 }
+
+  private def resolveDim(c: Content): (Int, Int) = {
+    val widthOpt = c.resolveLength(c.props.width, c.containingWidth, autoValue = None, noneValue = None)
+    val heightOpt = c.resolveLength(c.props.height, c.containingHeight, autoValue = None, noneValue = None)
+    (widthOpt, heightOpt) match {
+      case (Some(width), Some(height)) => (width, height)
+      case (Some(width), None) => (width, ((width.toFloat/intrinsicWidth) * intrinsicHeight).toInt)
+      case (None, Some(height)) => (((height.toFloat/intrinsicHeight) * intrinsicWidth).toInt, height)
+      case (None, None) => (intrinsicWidth, intrinsicHeight)
     }
   }
 
   def innerLayout(c: Content, constraints: LayoutConstraints): Unit = {
-    val replacedWidth = resolveWidth(c)
-    val replacedHeight = c.props.height match {
-      case AbsLength(pixels) => pixels.toInt
-      case PercentLength(scale) => (c.containingHeight*scale).toInt
-      case x => Util.warnln("unhandled height for replaced elem:" + x);???
-    }
-    c.box.contentWidth = replacedWidth
-    c.box.contentHeight = replacedHeight
+    val (w, h) = resolveDim(c)
+    c.box.contentWidth = w
+    c.box.contentHeight = h
     c.miniContext = EmptyMiniContext
   }
 
   def preferredWidths(c: Content): PrefWidths = {
-    val w = resolveWidth(c)
+    val (w,h) = resolveDim(c)
     PrefWidths(w, w)
   }
 }
