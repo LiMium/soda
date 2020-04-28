@@ -389,7 +389,7 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
               val pw = if (irFC == null) {
                 ir.props.width match {
                   case AbsLength(pixels) => PrefWidths(pixels.toInt, pixels.toInt)
-                  case _ => ???
+                  case x => println(x); ???
                 }
               } else {
                 irFC.preferredWidths(ir)
