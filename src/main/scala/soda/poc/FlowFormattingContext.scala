@@ -107,21 +107,10 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
         val newLC = lc.copy(widthConstraint = newWc)
         ir.getFormattingContext().innerLayout(ir, newLC)
       } else {
-        val iWidth = ir.props.width match {
-          case AbsLength(pixels) => pixels.toInt
-          case PercentLength(scale) => (scale * maxLineWidth).toInt
-          case AutoLength => maxLineWidth
-          case NoneLength => 0
-          case x => soda.utils.Util.warnln("TODO: Inline width " + x); 0
-        }
+        val iWidth = ir.resolveLength(ir.props.width, maxLineWidth, autoValue = Some(maxLineWidth), noneValue = None).getOrElse(0)
         ir.box.contentWidth = iWidth
 
-        val iHeightOpt = ir.props.height match {
-          case AbsLength(pixels) => Some(pixels.toInt)
-          case NoneLength => Some(0)
-          case AutoLength => None
-          case x => soda.utils.Util.warnln("TODO: Inline height " + x); Some(0)
-        }
+        val iHeightOpt = ir.resolveLength(ir.props.height, 0, autoValue = None, noneValue = Some(0))
         iHeightOpt.foreach {iHeight =>
           ir.box.contentHeight = iHeight
         }
@@ -204,7 +193,7 @@ class BlockMiniContext(c: Content, fc: FormattingContext, lc: LayoutConstraints)
         "block", "flow", "static",
         new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
         AutoLength, ContentUtil.zeroLength, NoneLength,
-        NoneLength, ContentUtil.emptyOffsets)
+        NoneLength, ContentUtil.emptyFontProp, ContentUtil.emptyOffsets)
       def getFormattingContext(): FormattingContext = fc
       def getSubContent(): Vector[Content] = Vector.empty
     }
@@ -226,14 +215,10 @@ class BlockMiniContext(c: Content, fc: FormattingContext, lc: LayoutConstraints)
 }
 
 final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContext {
-  private def marginTranslate(m: LengthSpec): Option[Int] = {
-    m match {
-      case AutoLength => None
-      case NoneLength => Some(0)
-      case AbsLength(pixels) => Some(pixels.toInt)
-      case x => Util.warnln("Not handled " + x); Some(0)
-    }
+  private def marginTranslate(c: Content, m: LengthSpec): Option[Int] = {
+    c.resolveLength(m, 0, None, Some(0))
   }
+
 
   private def natural(i: Int) = if (i < 0) 0 else i
 
@@ -275,14 +260,6 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     (widthMaxChecked, widthMaxChecked != tentativeWidth)
   }
 
-  def resolveLength(l: LengthSpec, containerLength: Float) = {
-    l match {
-      case AbsLength(pixels) => Some(pixels.toInt)
-      case PercentLength(scale) =>  Some((scale * containerLength).toInt)
-      case _ => None
-    }
-  }
-
   def innerLayout(c: Content, lc: LayoutConstraints) = {
     Util.logLayout(1, s"inner layout of $c", c.level)
 
@@ -290,17 +267,17 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     c.box.paddingThickness = c.computePaddings()
     Util.logLayout(4, "padding " + c.box.paddingThickness, c.level)
 
-    c.box.marginThickness.top = marginTranslate(c.props.margin.top).getOrElse(0)
-    c.box.marginThickness.bottom = marginTranslate(c.props.margin.bottom).getOrElse(0)
+    c.box.marginThickness.top = marginTranslate(c, c.props.margin.top).getOrElse(0)
+    c.box.marginThickness.bottom = marginTranslate(c, c.props.margin.bottom).getOrElse(0)
 
     // TODO: The below subtraction could be done by the caller of innerLayout
     val avlWidth = lc.widthConstraint.avl - c.box.marginBoxSansContentWidth
 
     val containingWidth = c.containingWidth
-    val cWidth = resolveLength(c.props.width, containingWidth)
+    val cWidth = c.resolveLength(c.props.width, containingWidth, None, None)
 
-    val cMarginLeft = marginTranslate(c.props.margin.left)
-    val cMarginRight = marginTranslate(c.props.margin.right)
+    val cMarginLeft = marginTranslate(c, c.props.margin.left)
+    val cMarginRight = marginTranslate(c, c.props.margin.right)
 
     val isShrinkToFit = lc.widthConstraint match {
       case FitAvailable(avl) => false
@@ -323,8 +300,8 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
 
     // println(c)
     // println(s"  Tentative width: $tentativeWidth, minWidth: ${c.props.compMinWidth} maxWidth: ${c.props.compMaxWidth}")
-    val minWidth = resolveLength(c.props.compMinWidth, containingWidth).getOrElse(0)
-    val maxWidth = resolveLength(c.props.compMaxWidth, containingWidth)
+    val minWidth = c.resolveLength(c.props.compMinWidth, containingWidth).getOrElse(0)
+    val maxWidth = c.resolveLength(c.props.compMaxWidth, containingWidth, autoValue = None, None)
     val (width, _) = constrainWidth(tentativeWidth, minWidth, maxWidth)
     // println(s"  width: $width")
 
@@ -336,13 +313,7 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     }
     val newLC = lc.copy(widthConstraint = newWc)
 
-    val heightDefinedOpt = c.props.height match {
-      case AbsLength(pixels) => Some(pixels.toInt)
-      case PercentLength(scale) => Some(if (c.parent != null) (c.containingHeight*scale).toInt else 0)
-      case AutoLength => None
-      case NoneLength => None
-      case x => println("TODO height: " + x); None
-    }
+    val heightDefinedOpt = c.resolveLength(c.props.height, if (c.parent != null) c.containingHeight else 0, autoValue = None, noneValue = None)
     heightDefinedOpt foreach {hd => c.box.contentHeight = hd}
 
     var contents = c.getSubContent()
@@ -395,7 +366,7 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
   }
 
   def preferredWidths(c: Content): PrefWidths = {
-    val rwOpt = resolveLength(c.props.width, c.containingWidth)
+    val rwOpt = c.resolveLength(c.props.width, c.containingWidth, autoValue = None, noneValue = None)
     val pwResult = rwOpt.map(rw => PrefWidths(rw, rw)).getOrElse({
       var prefMinWidth = 0
       var prefWidth = 0

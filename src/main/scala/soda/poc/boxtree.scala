@@ -210,47 +210,36 @@ class BoxWithProps(
     ("  " * level) + s"$debugId\n" + boxyDomChildren.map(_.dump(level + 1)).mkString("\n")
   }
 
-  private def resolveLengthForLayout(lengthSpec: LengthSpec):LengthSpec = {
-    lengthSpec match {
-      case frl: FontRelLength => AbsLength(frl.compute(fontProp))
-      case x => x
-    }
-  }
-
-  private def getComputedPadding(ls: LengthSpec, vwProps: ViewPortProps) = {
-    resolveLengthForLayout(ls)
-  }
-
-  def computePaddings(paddingThickness: Sides[LengthSpec], vwProps: ViewPortProps) = {
-    paddingThickness.left = getComputedPadding(size.paddingLeft.specified, vwProps)
-    paddingThickness.right = getComputedPadding(size.paddingRight.specified, vwProps)
-    paddingThickness.top = getComputedPadding(size.paddingTop.specified, vwProps)
-    paddingThickness.bottom = getComputedPadding(size.paddingBottom.specified, vwProps)
+  def computePaddings(paddingThickness: Sides[LengthSpec]) = {
+    paddingThickness.left = size.paddingLeft.specified
+    paddingThickness.right = size.paddingRight.specified
+    paddingThickness.top = size.paddingTop.specified
+    paddingThickness.bottom = size.paddingBottom.specified
   }
 
   override def toString = debugId
 
   def getContents(aParent: Content, vwProps: ViewPortProps): Vector[Content] = {
     val paddingThickness = new Sides[LengthSpec](NoneLength)
-    computePaddings(paddingThickness, vwProps)
+    computePaddings(paddingThickness )
 
     val marginSpecified = new Sides[LengthSpec](NoneLength);
-    marginSpecified.top = resolveLengthForLayout(size.marginTop.specified)
-    marginSpecified.bottom = resolveLengthForLayout(size.marginBottom.specified)
-    marginSpecified.left = resolveLengthForLayout(size.marginLeft.specified)
-    marginSpecified.right = resolveLengthForLayout(size.marginRight.specified)
-    val widthSpecified = resolveLengthForLayout(size.width.specified)
-    val heightSpecified = resolveLengthForLayout(size.height.specified)
+    marginSpecified.top = size.marginTop.specified
+    marginSpecified.bottom = size.marginBottom.specified
+    marginSpecified.left = size.marginLeft.specified
+    marginSpecified.right = size.marginRight.specified
+    val widthSpecified = size.width.specified
+    val heightSpecified = size.height.specified
 
     val offsets = new Sides[LengthSpec](NoneLength);
     def getOffset(name: String):LengthSpec = Property.getSpec(elemNode.nd, name).map(LengthProp.parseSpec(_)).getOrElse(AutoLength)
-    offsets.top = resolveLengthForLayout(getOffset("top"))
-    offsets.right = resolveLengthForLayout(getOffset("right"))
-    offsets.bottom = resolveLengthForLayout(getOffset("bottom"))
-    offsets.left = resolveLengthForLayout(getOffset("left"))
+    offsets.top = getOffset("top")
+    offsets.right = getOffset("right")
+    offsets.bottom = getOffset("bottom")
+    offsets.left = getOffset("left")
 
-    val compMinWidth = resolveLengthForLayout(size.minWidth.specified)
-    val compMaxWidth = resolveLengthForLayout(size.maxWidth.specified)
+    val compMinWidth = size.minWidth.specified
+    val compMaxWidth = size.maxWidth.specified
 
     val renderPropsComputed = new RenderProps(backgroundColor.computed, overflowX, overflowY, visibility)
     if (isReplaced) {
@@ -269,7 +258,7 @@ class BoxWithProps(
                 displayOuter, displayInner, positionProp,
                 new Sides[LengthSpec](NoneLength), border, paddingThickness,
                 getReplacedWidth, compMinWidth, compMaxWidth,
-                getReplacedHeight, offsets)
+                getReplacedHeight, fontProp, offsets)
               override def toString = "blk cntnt wrpr for " + debugId
             }
           painter.c = c
@@ -291,7 +280,7 @@ class BoxWithProps(
             "inline", "flow", positionProp,
             new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, paddingThickness,
             getReplacedWidth, compMinWidth, compMaxWidth,
-            getReplacedHeight, offsets)
+            getReplacedHeight, fontProp, offsets)
           val renderProps: RenderProps = renderPropsComputed
         })
       }
@@ -304,7 +293,7 @@ class BoxWithProps(
                 displayOuter, displayInner, positionProp,
                 marginSpecified, border, paddingThickness,
                 widthSpecified, compMinWidth, compMaxWidth,
-                heightSpecified, offsets)
+                heightSpecified, fontProp, offsets)
               override def toString = "blk cntnt wrpr for " + debugId
             }
         )
@@ -325,7 +314,7 @@ class BoxWithProps(
                 "inline", displayInner, positionProp,
                 marginSpecified, border, paddingThickness,
                 widthSpecified, compMinWidth, compMaxWidth,
-                heightSpecified, offsets)
+                heightSpecified, fontProp, offsets)
 
               val renderProps: RenderProps = renderPropsComputed
             })

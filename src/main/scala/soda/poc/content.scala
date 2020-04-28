@@ -18,6 +18,7 @@ class LayoutProps(
   val compMinWidth: LengthSpec,
   val compMaxWidth: LengthSpec,
   val height: LengthSpec,
+  val fontProp: FontProp,
   val offsets: Sides[LengthSpec], // Used for top, left, bottom, right
 )
 
@@ -116,16 +117,22 @@ sealed trait Content {
   }
 
   // util
-  private def resolveLength(lengthSpec: LengthSpec, containingBlockLength: Float) = {
+  def resolveLength(lengthSpec: LengthSpec, containingBlockLength: Float): Option[Int] = {
+    resolveLength(lengthSpec, containingBlockLength, Some(containingBlockLength.toInt), Some(0))
+  }
+
+  def resolveLength(lengthSpec: LengthSpec, containingBlockLength: Float, autoValue: Option[Int], noneValue: Option[Int]) = {
     lengthSpec match {
       case AbsLength(pxs) => Some(pxs.toInt)
-      case PercentLength(pct) => Some((pct * containingBlockLength).toInt)
-      case AutoLength => None
+      case frl: FontRelLength => Some(frl.compute(props.fontProp).toInt)
+      case PercentLength(scale) => Some((scale * containingBlockLength).toInt)
+      case AutoLength => autoValue
+      case NoneLength => noneValue
       case x => Util.warnln("Not handled: " + x); Some(0)
     }
   }
   private def findRelativeOffset(factor:Int, parentLength: Float, propName: String, vwProps: ViewPortProps) = {
-    resolveLength(props.offsets.byName(propName), parentLength).map(_ * factor)
+    resolveLength(props.offsets.byName(propName), parentLength, autoValue = None, noneValue = None).map(_ * factor)
   }
 
   private def findRootContentNode: Content = {
@@ -168,11 +175,15 @@ sealed trait Content {
     val paddingSpec = props.padding
     val result = new SidesInt()
 
+    def resolve(spec: LengthSpec) = {
+      resolveLength(spec, containingWidth, autoValue=Some(0), noneValue = None).getOrElse(0)
+    }
+
     // Note: percentage values for padding always refer to containing width and not height
-    result.top = resolveLength(paddingSpec.top, containingWidth).getOrElse(0)
-    result.right = resolveLength(paddingSpec.right, containingWidth).getOrElse(0)
-    result.bottom = resolveLength(paddingSpec.bottom, containingWidth).getOrElse(0)
-    result.left = resolveLength(paddingSpec.left, containingWidth).getOrElse(0)
+    result.top = resolve(paddingSpec.top)
+    result.right = resolve(paddingSpec.right)
+    result.bottom = resolve(paddingSpec.bottom)
+    result.left = resolve(paddingSpec.left)
 
     result
   }
@@ -208,6 +219,7 @@ final class InlineBreak(val parent: Content) extends InlineRenderable {
     new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
     NoneLength, ContentUtil.zeroLength, NoneLength,
     NoneLength,
+    ContentUtil.emptyFontProp,
     ContentUtil.emptyOffsets)
 
   val renderProps: RenderProps = new RenderProps(null, "visible", "visible", true)
@@ -233,6 +245,7 @@ final class InlineWordRenderable(val parent: Content, word: String, visibility: 
     new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
     estWidth, ContentUtil.zeroLength, NoneLength,
     estHeight,
+    fontProp,
     ContentUtil.emptyOffsets)
 
   val renderProps: RenderProps = new RenderProps(null, "visible", "visible", visibility)
@@ -242,6 +255,7 @@ object ContentUtil {
   val emptyBorder = new Sides[Border](new Border())
   val emptyOffsets = new Sides[LengthSpec](AutoLength)
   val emptySideInt = new SidesInt
+  val emptyFontProp = new FontProp()
   val zeroLength = AbsLength(0)
 
   def isAbsolutish(position: String) = {

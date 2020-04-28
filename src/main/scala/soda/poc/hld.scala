@@ -79,7 +79,7 @@ object Layout {
       val props: soda.poc.LayoutProps = new LayoutProps(
         "block", "flow-root", "relative",
         ContentUtil.emptyOffsets, ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
-        NoneLength, NoneLength, NoneLength, NoneLength, ContentUtil.emptyOffsets)
+        NoneLength, NoneLength, NoneLength, NoneLength, ContentUtil.emptyFontProp, ContentUtil.emptyOffsets)
     }
     initCB.box.contentWidth = vwProps.width
     initCB.box.contentHeight = vwProps.height
