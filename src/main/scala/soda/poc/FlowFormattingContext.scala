@@ -358,6 +358,7 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
       c.box.contentHeight = c.miniContext.getHeight
     }
 
+    // TODO: Move this to base class
     c.absolutes.foreach {abs =>
       val absLC = new LayoutConstraints(FitToShrink(abs.containingWidth), FitToShrink(abs.containingHeight), lc.vwProps)
       abs.getFormattingContext().innerLayout(abs, absLC)
