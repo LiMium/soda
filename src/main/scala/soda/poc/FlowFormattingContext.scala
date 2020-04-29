@@ -362,6 +362,25 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     c.absolutes.foreach {abs =>
       val absLC = new LayoutConstraints(FitToShrink(abs.containingWidth), FitToShrink(abs.containingHeight), lc.vwProps)
       abs.getFormattingContext().innerLayout(abs, absLC)
+
+      def resolveAbsLength(s: LengthSpec, cl: Int) = { abs.resolveLength(s, cl, autoValue = None, noneValue = None) }
+
+      val topOpt = resolveAbsLength(abs.props.offsets.top, abs.containingHeight)
+      val bottomOpt = resolveAbsLength(abs.props.offsets.bottom, abs.containingHeight)
+      val leftOpt = resolveAbsLength(abs.props.offsets.left, abs.containingWidth)
+      val rightOpt = resolveAbsLength(abs.props.offsets.right, abs.containingWidth)
+
+      if (topOpt.isDefined) {
+        abs.box.offsetY = topOpt.get
+      } else if (bottomOpt.isDefined) {
+        abs.box.offsetY = abs.containingHeight - (abs.box.marginBoxHeight + bottomOpt.get)
+      }
+
+      if (rightOpt.isDefined) {
+        abs.box.offsetX = abs.containingWidth - (abs.box.marginBoxWidth + rightOpt.get)
+      } else if (leftOpt.isDefined) {
+        abs.box.offsetX = leftOpt.get
+      }
     }
     Util.logLayout(1, s"done inner layout of $c, dim: ${c.box.marginBoxWidth} x ${c.box.marginBoxHeight}", c.level)
   }
