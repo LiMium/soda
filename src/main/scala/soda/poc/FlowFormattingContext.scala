@@ -360,24 +360,27 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
 
     // TODO: Move this to base class
     c.absolutes.foreach {abs =>
-      val absLC = new LayoutConstraints(FitToShrink(abs.containingWidth), FitToShrink(abs.containingHeight), lc.vwProps)
+      val cWidth = abs.containingWidth
+      val cHeight = abs.containingHeight
+
+      val absLC = new LayoutConstraints(FitToShrink(cWidth), FitToShrink(cHeight), lc.vwProps)
       abs.getFormattingContext().innerLayout(abs, absLC)
 
       def resolveAbsLength(s: LengthSpec, cl: Int) = { abs.resolveLength(s, cl, autoValue = None, noneValue = None) }
 
-      val topOpt = resolveAbsLength(abs.props.offsets.top, abs.containingHeight)
-      val bottomOpt = resolveAbsLength(abs.props.offsets.bottom, abs.containingHeight)
-      val leftOpt = resolveAbsLength(abs.props.offsets.left, abs.containingWidth)
-      val rightOpt = resolveAbsLength(abs.props.offsets.right, abs.containingWidth)
+      val topOpt = resolveAbsLength(abs.props.offsets.top, cHeight)
+      val bottomOpt = resolveAbsLength(abs.props.offsets.bottom, cHeight)
+      val leftOpt = resolveAbsLength(abs.props.offsets.left, cWidth)
+      val rightOpt = resolveAbsLength(abs.props.offsets.right, cWidth)
 
       if (topOpt.isDefined) {
         abs.box.offsetY = topOpt.get
       } else if (bottomOpt.isDefined) {
-        abs.box.offsetY = abs.containingHeight - (abs.box.marginBoxHeight + bottomOpt.get)
+        abs.box.offsetY = cHeight - (abs.box.marginBoxHeight + bottomOpt.get)
       }
 
       if (rightOpt.isDefined) {
-        abs.box.offsetX = abs.containingWidth - (abs.box.marginBoxWidth + rightOpt.get)
+        abs.box.offsetX = cWidth - (abs.box.marginBoxWidth + rightOpt.get)
       } else if (leftOpt.isDefined) {
         abs.box.offsetX = leftOpt.get
       }
