@@ -28,9 +28,9 @@ sealed trait Queued {
 }
 
 class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Queued {
-  var renderables = Vector[InlineRenderable]()
-  var height = 0
-  var width = 0
+  private var renderables = Vector[InlineRenderable]()
+  private var height = 0
+  private var width = 0
 
   def willFit(ir: InlineRenderable) = {
     val requiredSpace = ir.box.marginBoxWidth + queue.map(_.box.marginBoxWidth).sum
@@ -73,8 +73,15 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
   }
 
   def getCurrPosX = width
+  def getCurrPosY = height
 
   def remWidth = maxWidth - width
+
+  def paintAll(g: Graphics2D) = {
+    renderables.foreach{ir =>
+      ir.paintAll(g)
+    }
+  }
 }
 
 class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[Content] with Queued {
@@ -117,7 +124,7 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
       }
       if (currLine == null) {
         startNewLine()
-      } else if (currLine.width != 0 && !currLine.willFit(ir)) {
+      } else if (currLine.getCurrPosX != 0 && !currLine.willFit(ir)) {
         startNewLine()
       }
       currLine.add(ir)
@@ -138,7 +145,7 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
 
   private def startNewLine() = {
     if (currLine != null) {
-      currPosY += currLine.height
+      currPosY += currLine.getCurrPosY
     }
     if (config.layoutDebugLevel > 2) println()
     Util.logLayout(2, "starting new line at " + currPosY, level)
@@ -154,16 +161,14 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
       g2.translate(0, l.yPos)
       if (config.paintDebugLevel > 2) {
         g.setColor(config.lineDebugColor)
-        g.fillRect(0, l.yPos, l.width, l.height)
+        g.fillRect(0, l.yPos, l.getCurrPosX, l.getCurrPosY)
       }
-      l.renderables.foreach{ir =>
-        ir.paintAll(g2)
-      }
+      l.paintAll(g2)
       g2.dispose()
     }
   }
 
-  def getHeight = lines.map(_.height).sum
+  def getHeight = lines.map(_.getCurrPosY).sum
 }
 
 class BlockMiniContext(c: Content, fc: FormattingContext, lc: LayoutConstraints) extends MiniContext[Content] {
