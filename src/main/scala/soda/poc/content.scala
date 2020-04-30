@@ -20,6 +20,7 @@ class LayoutProps(
   val height: LengthSpec,
   val fontProp: FontProp,
   val offsets: Sides[LengthSpec], // Used for top, left, bottom, right
+  val textAlign : String = "left"
 )
 
 class RenderProps (

@@ -82,9 +82,18 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
       ir.paintAll(g)
     }
   }
+
+  def completeLine(textAlign: String) = {
+    if (textAlign == "right") {
+      val rw = remWidth
+      renderables.foreach{ir =>
+        ir.box.offsetX += rw
+      }
+    }
+  }
 }
 
-class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[Content] with Queued {
+class InlineMiniContext(level: Int, textAlign: String, lc: LayoutConstraints) extends MiniContext[Content] with Queued {
   private val maxLineWidth = lc.widthConstraint.avl
   private val newWc = FitToShrink(maxLineWidth)
 
@@ -146,6 +155,7 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
   private def startNewLine() = {
     if (currLine != null) {
       currPosY += currLine.getCurrPosY
+      currLine.completeLine(textAlign)
     }
     if (config.layoutDebugLevel > 2) println()
     Util.logLayout(2, "starting new line at " + currPosY, level)
@@ -168,6 +178,11 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
     }
   }
 
+  def completeLayout() = {
+    if (currLine != null) {
+      currLine.completeLine(textAlign)
+    }
+  }
   def getHeight = lines.map(_.getCurrPosY).sum
 }
 
@@ -323,7 +338,9 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     var contents = c.getSubContent()
     var currIMC:InlineMiniContext = null
     var currBMC:BlockMiniContext = null
-    def initCurrIMC() = {if (currIMC == null) currIMC = new InlineMiniContext(c.level+1, newLC) }
+    val textAlign = c.props.textAlign
+
+    def initCurrIMC() = {if (currIMC == null) currIMC = new InlineMiniContext(c.level+1, textAlign, newLC) }
     def initCurrBMC() = {
       if (currBMC == null) {
         currBMC = new BlockMiniContext(c, this, newLC)
@@ -338,6 +355,7 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
         case bc: BlockContent =>
           // println("  block content", bc)
           if (currIMC != null) {
+            currIMC.completeLayout()
             initCurrBMC()
             currBMC.add(currIMC)
             currIMC = null
@@ -352,9 +370,12 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
         mc.add(ch)
       }
     }
-    if (currIMC != null && currBMC != null) {
-      currBMC.add(currIMC)
-      currIMC = null
+    if (currIMC != null) {
+      currIMC.completeLayout()
+      if (currBMC != null) {
+        currBMC.add(currIMC)
+        currIMC = null
+      }
     }
     // update node's mini context
     c.miniContext = if (currIMC != null) currIMC else if (currBMC == null) EmptyMiniContext else currBMC

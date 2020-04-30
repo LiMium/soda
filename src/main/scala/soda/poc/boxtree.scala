@@ -165,6 +165,7 @@ class BoxWithProps(
   var overflowX = "visible"
   var overflowY = "visible"
   var visibility = true
+  var textAlignOpt:Option[String] = None
 
   def computeSelfL2Props(vwProps: ViewPortProps) = {
     val nd = elemNode.nd
@@ -177,6 +178,7 @@ class BoxWithProps(
     visibility = parseVisibility()
     overflowX = Property.getSpec(nd, "overflow-x").getOrElse("visible")
     overflowY = Property.getSpec(nd, "overflow-y").getOrElse("visible")
+    textAlignOpt = Property.getSpec(nd, "text-align").orElse(domParentBox.flatMap(_.textAlignOpt))
 
     size.init(nd)
   }
@@ -236,7 +238,11 @@ class BoxWithProps(
     val compMinWidth = size.minWidth.specified
     val compMaxWidth = size.maxWidth.specified
 
+    // TODO: Default should be "right" when direction is "rtl"
+    val textAlign = textAlignOpt.getOrElse("left")
+
     val renderPropsComputed = new RenderProps(backgroundColor.computed, overflowX, overflowY, visibility)
+
     if (isReplaced) {
       if (displayOuter == "block") {
         if (tag == "img") {
@@ -289,7 +295,8 @@ class BoxWithProps(
                 displayOuter, displayInner, positionProp,
                 marginSpecified, border, paddingThickness,
                 widthSpecified, compMinWidth, compMaxWidth,
-                heightSpecified, fontProp, offsets)
+                heightSpecified, fontProp, offsets,
+                textAlign)
               override def toString = "blk cntnt wrpr for " + debugId
             }
         )
