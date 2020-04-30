@@ -164,7 +164,6 @@ class InlineMiniContext(level: Int, lc: LayoutConstraints) extends MiniContext[C
   }
 
   def getHeight = lines.map(_.height).sum
-  def getWidth = lines.map(_.width).maxOption.getOrElse(0)
 }
 
 class BlockMiniContext(c: Content, fc: FormattingContext, lc: LayoutConstraints) extends MiniContext[Content] {
