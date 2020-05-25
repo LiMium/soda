@@ -20,6 +20,8 @@ class InitialMiniContext extends MiniContext[Content] {
     child.paintAll(g)
   }
   override def getCurrPosXY(): (Int, Int) = (0, 0)
+
+  def isNotEmpty = child != null
 }
 
 object Layout {

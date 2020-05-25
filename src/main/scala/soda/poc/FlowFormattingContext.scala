@@ -32,6 +32,8 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
   private var height = 0
   private var width = 0
 
+  def isNotEmpty = renderables.nonEmpty
+
   def willFit(ir: InlineRenderable) = {
     val requiredSpace = ir.box.marginBoxWidth + queue.map(_.box.marginBoxWidth).sum
     (requiredSpace + width) <= maxWidth
@@ -184,6 +186,8 @@ class InlineMiniContext(level: Int, textAlign: String, lc: LayoutConstraints) ex
     }
   }
   def getHeight = lines.map(_.getCurrPosY).sum
+
+  def isNotEmpty = lines.headOption.map(_.isNotEmpty).getOrElse(false)
 }
 
 class BlockMiniContext(c: Content, fc: FormattingContext, lc: LayoutConstraints) extends MiniContext[Content] {
@@ -207,18 +211,20 @@ class BlockMiniContext(c: Content, fc: FormattingContext, lc: LayoutConstraints)
   }
 
   def add(ctx: MiniContext[Content]): Unit = {
-    val bc = new BlockContent(c, None, "anon block wrapper for inline mini context", new RenderProps(null, "visible", "visible", true)) {
-      val props = new LayoutProps(
-        "block", "flow", "static",
-        new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
-        AutoLength, ContentUtil.zeroLength, NoneLength,
-        NoneLength, ContentUtil.emptyFontProp, ContentUtil.emptyOffsets)
-      def getFormattingContext(): FormattingContext = fc
-      def getSubContent(): Vector[Content] = Vector.empty
+    if (ctx.isNotEmpty) {
+      val bc = new BlockContent(c, None, "anon block wrapper for inline mini context", new RenderProps(null, "visible", "visible", true)) {
+        val props = new LayoutProps(
+          "block", "flow", "static",
+          new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
+          AutoLength, ContentUtil.zeroLength, NoneLength,
+          NoneLength, ContentUtil.emptyFontProp, ContentUtil.emptyOffsets)
+        def getFormattingContext(): FormattingContext = fc
+        def getSubContent(): Vector[Content] = Vector.empty
+      }
+      bc.miniContext = ctx
+      addImpl(bc, false)
+      currY += bc.miniContext.getHeight
     }
-    bc.miniContext = ctx
-    addImpl(bc, false)
-    currY += bc.miniContext.getHeight
   }
 
   def paint(g: Graphics2D): Unit = {
@@ -231,6 +237,8 @@ class BlockMiniContext(c: Content, fc: FormattingContext, lc: LayoutConstraints)
   def getCurrPosXY(): (Int, Int) = {
     (0, currY)
   }
+
+  def isNotEmpty = blocks.nonEmpty
 }
 
 final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContext {

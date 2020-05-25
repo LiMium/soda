@@ -8,6 +8,7 @@ trait MiniContext[T <: Content] extends CanPaint {
   def getHeight: Int
   def paint(g:Graphics2D):Unit
   def getCurrPosXY(): (Int, Int)
+  def isNotEmpty: Boolean
 }
 
 object EmptyMiniContext extends MiniContext[Content] {
@@ -17,4 +18,5 @@ object EmptyMiniContext extends MiniContext[Content] {
     // println("Painting of empty minicontext")
   }
   def getCurrPosXY(): (Int, Int) = (0, 0)
+  def isNotEmpty: Boolean = false
 }
