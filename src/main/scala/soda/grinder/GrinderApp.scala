@@ -155,7 +155,7 @@ object GrinderApp {
   }
 
   def main(args: Array[String]) = {
-    if (config.paintDebugLevel > 0 || config.showBoxes) {
+    if (config.affectsRender) {
       Util.warnln("Paint debug level is too high or showBoxes is true")
     } else {
       startGngrServer()
