@@ -28,6 +28,8 @@ object CSSNorm {
         "h1              { font-size: 2em; margin: .67em 0 }" +
         "h2              { font-size: 1.5em; margin: .75em 0 }" +
         "h3              { font-size: 1.17em; margin: .83em 0 }" +
+        "h4, p, blockquote, ul, fieldset, form,ol, dl, dir," +
+        "menu            { margin: 1em 0 }" + // Changed from 1.2em to match css21 test expectations. Other browsers seem to use 1em as well.
         "h5              { font-size: .83em; margin: 1.5em 0 }" +
         "h6              { font-size: .75em; margin: 1.67em 0 }" +
         "h1, h2, h3, h4," +
@@ -66,13 +68,7 @@ object CSSNorm {
         "BDO[DIR=\"ltr\"]  { direction: ltr; unicode-bidi: bidi-override }" +
         "BDO[DIR=\"rtl\"]  { direction: rtl; unicode-bidi: bidi-override }" +
         "*[DIR=\"ltr\"]    { direction: ltr; unicode-bidi: embed }" +
-        "*[DIR=\"rtl\"]    { direction: rtl; unicode-bidi: embed }";
-
-        /* TODO: Commented until margin collapse isn't implemented
-        "h4, p, blockquote, ul, fieldset, form,ol, dl, dir," +
-        "menu            { margin: 1em 0 }" + // Changed from 1.2em to match css21 test expectations. Other browsers seem to use 1em as well.
-        */
-
+        "*[DIR=\"rtl\"]    { direction: rtl; unicode-bidi: embed }"
   }
 
 }

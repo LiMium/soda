@@ -13,8 +13,9 @@ trait FormattingContext {
     *
     * @param c content whose inner layout is to be done
     * @param constraints layout constraints
+    * @returns Number of pixels to be advanced in vertical direction
     */
-  def innerLayout(c: Content, constraints: LayoutConstraints): Unit
+  def innerLayout(c: Content, marginCollapseTopAvl: Int, constraints: LayoutConstraints): Int
 
   /**
     * Compute the `preferred min width` and `preferred width` as per section 10.3.5 of CSS 2.2
@@ -40,11 +41,12 @@ final class SimpleReplacedFormattingContext(img: BufferedImage) extends Formatti
     }
   }
 
-  def innerLayout(c: Content, constraints: LayoutConstraints): Unit = {
+  def innerLayout(c: Content, marginCollapseTopAvl: Int, constraints: LayoutConstraints): Int = {
     val (w, h) = resolveDim(c)
     c.box.contentWidth = w
     c.box.contentHeight = h
     c.miniContext = EmptyMiniContext
+    h
   }
 
   def preferredWidths(c: Content): PrefWidths = {

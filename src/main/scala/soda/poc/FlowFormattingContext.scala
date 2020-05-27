@@ -123,7 +123,7 @@ class InlineMiniContext(level: Int, textAlign: String, lc: LayoutConstraints) ex
           startNewLine()
         }
         val newLC = lc.copy(widthConstraint = newWc)
-        ir.getFormattingContext().innerLayout(ir, newLC)
+        ir.getFormattingContext().innerLayout(ir, 0, newLC)
       } else {
         val iWidth = ir.resolveLength(ir.props.width, maxLineWidth, autoValue = Some(maxLineWidth), noneValue = None).getOrElse(0)
         ir.box.contentWidth = iWidth
@@ -190,23 +190,37 @@ class InlineMiniContext(level: Int, textAlign: String, lc: LayoutConstraints) ex
   def isNotEmpty = lines.headOption.map(_.isNotEmpty).getOrElse(false)
 }
 
-class BlockMiniContext(c: Content, fc: FormattingContext, lc: LayoutConstraints) extends MiniContext[Content] {
+class BlockMiniContext(c: Content, fc: FormattingContext, parentMarginCollapseTopAvl: Int, lc: LayoutConstraints) extends MiniContext[Content] {
   private var blocks: Vector[Content] = Vector.empty
   private var currY = 0
   override def add(bc: Content): Unit = {
     addImpl(bc, true)
   }
 
+  private def findPrevNonEmpty(): Option[Content] = {
+    blocks.reverseIterator.find(_.box.marginBoxHeight != 0)
+  }
+
+  private def computeMarginCollapseTopAvl(bc: Content): Int = {
+    // blocks.lastOption.map(_.box.marginThickness.bottom).getOrElse(parentMarginCollapseTopAvl)
+    findPrevNonEmpty.map(_.box.marginThickness.bottom).getOrElse(parentMarginCollapseTopAvl)
+  }
+
   private def addImpl(bc: Content, innerLayoutNeeded: Boolean) = {
     bc.box.offsetX = 0
     bc.box.offsetY = currY
+
+    val marginCollapseTopAvl = computeMarginCollapseTopAvl(bc)
+
     bc.computeRelativeOffsets(lc.vwProps)
     Util.logLayout(3, s"added block at ${bc.box.offsetX}, ${bc.box.offsetY}", bc.level)
 
     if (innerLayoutNeeded) {
-      bc.getFormattingContext().innerLayout(bc, lc)
+      val vertAdvance = bc.getFormattingContext().innerLayout(bc, marginCollapseTopAvl, lc)
+      currY += vertAdvance
+    } else {
+      currY += bc.box.marginBoxHeight
     }
-    currY += bc.box.marginBoxHeight
     blocks :+= bc
   }
 
@@ -287,7 +301,7 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     (widthMaxChecked, widthMaxChecked != tentativeWidth)
   }
 
-  def innerLayout(c: Content, lc: LayoutConstraints) = {
+  def innerLayout(c: Content, marginCollapseTopAvl: Int, lc: LayoutConstraints) = {
     Util.logLayout(1, s"inner layout of $c", c.level)
 
     c.box.border = c.props.border
@@ -296,6 +310,11 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
 
     c.box.marginThickness.top = marginTranslate(c, c.props.margin.top).getOrElse(0)
     c.box.marginThickness.bottom = marginTranslate(c, c.props.margin.bottom).getOrElse(0)
+
+    val marginCollapseOffset = math.min(c.box.marginThickness.top, marginCollapseTopAvl)
+    if (marginCollapseOffset > 0) {
+      c.box.offsetY -= marginCollapseOffset
+    }
 
     // TODO: The below subtraction could be done by the caller of innerLayout
     val avlWidth = lc.widthConstraint.avl - c.box.marginBoxSansContentWidth
@@ -347,11 +366,14 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
     var currIMC:InlineMiniContext = null
     var currBMC:BlockMiniContext = null
     val textAlign = c.props.textAlign
+    val parentMarginCollapseTopAvl = if (c.box.border.top.thickness == 0 && c.box.paddingThickness.top == 0) {
+      math.max(c.box.marginThickness.top, marginCollapseTopAvl)
+    } else 0
 
     def initCurrIMC() = {if (currIMC == null) currIMC = new InlineMiniContext(c.level+1, textAlign, newLC) }
     def initCurrBMC() = {
       if (currBMC == null) {
-        currBMC = new BlockMiniContext(c, this, newLC)
+        currBMC = new BlockMiniContext(c, this, parentMarginCollapseTopAvl, newLC)
       }
     }
     contents foreach {ch =>
@@ -397,7 +419,7 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
       val cHeight = abs.containingHeight
 
       val absLC = new LayoutConstraints(FitToShrink(cWidth), FitToShrink(cHeight), lc.vwProps)
-      abs.getFormattingContext().innerLayout(abs, absLC)
+      abs.getFormattingContext().innerLayout(abs, 0, absLC)
 
       def resolveAbsLength(s: LengthSpec, cl: Int) = { abs.resolveLength(s, cl, autoValue = None, noneValue = None) }
 
@@ -419,6 +441,8 @@ final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContex
       }
     }
     Util.logLayout(1, s"done inner layout of $c, dim: ${c.box.marginBoxWidth} x ${c.box.marginBoxHeight}", c.level)
+
+    c.box.marginBoxHeight - marginCollapseOffset
   }
 
   def preferredWidths(c: Content): PrefWidths = {

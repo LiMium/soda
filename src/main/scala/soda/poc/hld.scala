@@ -87,7 +87,7 @@ object Layout {
     initCB.box.contentHeight = vwProps.height
 
     val constraints = LayoutConstraints(FitAvailable(vwProps.width), FitToShrink(vwProps.height), vwProps)
-    initCB.getFormattingContext().innerLayout(initCB, constraints)
+    initCB.getFormattingContext().innerLayout(initCB, 0, constraints)
 
     initCB
   }
