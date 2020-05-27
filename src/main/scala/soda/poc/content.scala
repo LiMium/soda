@@ -185,7 +185,6 @@ sealed trait Content {
     result.right = resolve(paddingSpec.right)
     result.bottom = resolve(paddingSpec.bottom)
     result.left = resolve(paddingSpec.left)
-
     result
   }
 }
@@ -193,13 +192,13 @@ sealed trait Content {
 abstract class BlockContent(val parent: Content, canPaintOpt: Option[CanPaint], debugStr: String, val renderProps: RenderProps) extends Content {
   val displayOuter = "block"
   def paintSelf(g: Graphics2D): Unit = {
+    canPaintOpt.foreach(cp => {
+      cp.paint(g)
+    })
     if (config.paintDebugLevel > 1) {
       g.setColor(Color.magenta.darker())
       g.drawRect(0, 0, box.contentWidth-1, box.contentHeight-1)
     }
-    canPaintOpt.foreach(cp => {
-      cp.paint(g)
-    })
   }
   override def toString(): String = debugStr
 }
