@@ -20,11 +20,16 @@ import java.awt.Color
 
 object Analysis {
 
-  def getStyleSheets(dom: RenderableDocument, userCSS: String, url: URL) = {
+  def getStyleSheets(dom: RenderableDocument, userCSS: Option[String], url: URL) = {
     // TODO: br is supposed to be an inline element
     // val cssNorm = "head {display: none} body, div, p { display: block; margin:1em } body {color: #000000; background: #ffffff} br {display:block}"
-    val domStyles = getDomStyles(dom)
-    (List(CSSNorm.defaultStyleSheet, userCSS) ++ domStyles ).map(parseCSS(_, url))
+    val domStyles = getDomStyles(dom).map(s => s -> StyleSheet.Origin.AUTHOR)
+    val userCSSWithOrigin = userCSS.map(s => s -> StyleSheet.Origin.USER)
+    (List(CSSNorm.defaultStyleSheet -> StyleSheet.Origin.AGENT) ++ userCSSWithOrigin ++ domStyles).map{t =>
+      val ss = parseCSS(t._1, url)
+      ss.setOrigin(t._2)
+      ss
+    }
   }
 
   def getDomStyles(dom: RenderableDocument): List[String] = {
@@ -202,7 +207,7 @@ class TextNode(val text: RenderableText, parent: Option[ElementNode]) extends De
 object Analyser {
   def process(url: java.net.URL) = {
     val dom = Util.parse(url)
-    val styleSheets = Analysis.getStyleSheets(dom, "", url)
+    val styleSheets = Analysis.getStyleSheets(dom, None, url)
     val ddom = analyse(dom, styleSheets)
     // println(ddom)
     ddom
