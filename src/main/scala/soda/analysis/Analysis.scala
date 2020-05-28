@@ -19,17 +19,12 @@ import soda.poc._
 import java.awt.Color
 
 object Analysis {
+  private lazy val normSheet = parseCSS(CSSNorm.defaultStyleSheet, StyleSheet.Origin.AGENT, null)
 
-  def getStyleSheets(dom: RenderableDocument, userCSS: Option[String], url: URL) = {
-    // TODO: br is supposed to be an inline element
-    // val cssNorm = "head {display: none} body, div, p { display: block; margin:1em } body {color: #000000; background: #ffffff} br {display:block}"
-    val domStyles = getDomStyles(dom).map(s => s -> StyleSheet.Origin.AUTHOR)
-    val userCSSWithOrigin = userCSS.map(s => s -> StyleSheet.Origin.USER)
-    (List(CSSNorm.defaultStyleSheet -> StyleSheet.Origin.AGENT) ++ userCSSWithOrigin ++ domStyles).map{t =>
-      val ss = parseCSS(t._1, url)
-      ss.setOrigin(t._2)
-      ss
-    }
+  def getStyleSheets(dom: RenderableDocument, userCSS: Option[String], url: URL): List[StyleSheet] = {
+    val domStyles = getDomStyles(dom).map(s => parseCSS(s, StyleSheet.Origin.AUTHOR, url))
+    val userCSSWithOrigin = userCSS.map(s => parseCSS(s, StyleSheet.Origin.USER, url))
+    normSheet +: userCSSWithOrigin ++: domStyles
   }
 
   def getDomStyles(dom: RenderableDocument): List[String] = {
@@ -44,11 +39,14 @@ object Analysis {
     list.toList
   }
 
-  def parseCSS(css:String, baseURL: URL) : StyleSheet = {
-    CSSParserFactory.getInstance().parse(
+  def parseCSS(css:String, origin: StyleSheet.Origin, baseURL: URL) : StyleSheet = {
+    val ss = CSSParserFactory.getInstance().parse(
       css,
       (url) => {url.openStream},
       "utf-8", SourceType.EMBEDDED, baseURL)
+
+    ss.setOrigin(origin)
+    ss
   }
 
   def getNodeData(element: RenderableElement, classifiedRules: Holder, parentNodeData: Option[NodeData]) = {
