@@ -122,8 +122,8 @@ class Box {
         val ih = bi.getHeight()
         val rep = bgProps.repeat.specified
 
-        val xCount = if (rep == "repeat" || rep == "repeat-x") 1 + math.ceil(bbWidth.toDouble / iw).toInt else 1
-        val yCount = if (rep == "repeat" || rep == "repeat-y") 1 + math.ceil(bbHeight.toDouble / ih).toInt else 1
+        val xCount = if (rep == "repeat" || rep == "repeat-x") 2 + math.ceil(bbWidth.toDouble / iw).toInt else 1
+        val yCount = if (rep == "repeat" || rep == "repeat-y") 2 + math.ceil(bbHeight.toDouble / ih).toInt else 1
 
         val bLeft = border.left.thickness
         val bTop = border.top.thickness
