@@ -126,7 +126,7 @@ class BoxWithProps(
   val applicableFormattingContext: FormattingContext = formattingContext.getOrElse(domParentBox.map(_.applicableFormattingContext).get)
 
   // Level2 Properties
-  val backgroundColor = new ColorProp("background-color")
+  val backgroundProps = new BackgroundProps()
   val colorProp = new ColorProp("color")
   val fontProp = new FontProp()
 
@@ -174,7 +174,7 @@ class BoxWithProps(
     colorProp.init(nd, parentColor)
     fontProp.init(nd, domParentBox.map(_.fontProp), vwProps)
     computeBorderProps(vwProps)
-    backgroundColor.init(nd, null)
+    backgroundProps.init(nd)
     visibility = parseVisibility()
     overflowX = Property.getSpec(nd, "overflow-x").getOrElse("visible")
     overflowY = Property.getSpec(nd, "overflow-y").getOrElse("visible")
@@ -241,7 +241,7 @@ class BoxWithProps(
     // TODO: Default should be "right" when direction is "rtl"
     val textAlign = textAlignOpt.getOrElse("left")
 
-    val renderPropsComputed = new RenderProps(backgroundColor.computed, overflowX, overflowY, visibility)
+    val renderPropsComputed = new RenderProps(backgroundProps, overflowX, overflowY, visibility)
 
     if (isReplaced) {
       if (displayOuter == "block") {

@@ -24,7 +24,7 @@ class LayoutProps(
 )
 
 class RenderProps (
-  val bgColor: Color,
+  val bgProps: BackgroundProps,
   val overflowX: String,
   val overflowY: String,
   val visibility: Boolean
@@ -85,7 +85,7 @@ sealed trait Content {
     val g2 = g.create().asInstanceOf[Graphics2D]
     g2.translate(box.paintOffsetX, box.paintOffsetY)
     if (renderProps.visibility) {
-      box.paint(g2, renderProps.bgColor);
+      box.paint(g2, renderProps.bgProps);
     }
 
     {

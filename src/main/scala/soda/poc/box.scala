@@ -2,6 +2,7 @@ package soda.poc
 
 import java.awt.Graphics2D
 import java.awt.Color
+import cz.vutbr.web.css.TermLengthOrPercent
 
 class Sides[T](initial: => T) {
   var top: T = initial
@@ -89,15 +90,61 @@ class Box {
   def marginBoxHeight = marginHeight + borderBoxHeight
   def marginBoxSansContentHeight = marginHeight + borderHeight + paddingHeight
 
-  def paint(g: Graphics2D, bgColor: Color): Unit = {
+  def paint(g: Graphics2D, bgProps: BackgroundProps): Unit = {
     if (config.showBoxes) {
       g.setColor(Color.MAGENTA)
       g.drawRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
     }
 
-    if (bgColor != null) {
-      g.setColor(bgColor)
-      g.fillRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
+    if (bgProps != null) {
+      if (bgProps.color.computed != null) {
+        g.setColor(bgProps.color.computed)
+        g.fillRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
+      }
+
+      def calcOffset(pos: TermLengthOrPercent, width: Int) = {
+        if (pos == null) {
+          0
+        } else if (pos.isPercentage()) {
+          (pos.getValue() * width/100).toInt
+        } else {
+          (pos.getValue()).toInt
+        }
+      }
+
+      bgProps.getBufImg foreach {bi =>
+        val bgGraphics = g.create().asInstanceOf[Graphics2D]
+        val bbWidth = borderBoxWidth
+        val bbHeight = borderBoxHeight
+        val pw = paddingBoxWidth
+        val ph = paddingBoxHeight
+        val iw = bi.getWidth()
+        val ih = bi.getHeight()
+        val rep = bgProps.repeat.specified
+
+        val xCount = if (rep == "repeat" || rep == "repeat-x") 1 + math.ceil(bbWidth.toDouble / iw).toInt else 1
+        val yCount = if (rep == "repeat" || rep == "repeat-y") 1 + math.ceil(bbHeight.toDouble / ih).toInt else 1
+
+        val bLeft = border.left.thickness
+        val bTop = border.top.thickness
+
+        val imageX = calcOffset(bgProps.posX, pw - iw)
+        val imageY = calcOffset(bgProps.posY, ph - ih)
+
+        var startX = if (xCount == 1) bLeft+imageX else bLeft%iw - (iw - (imageX % iw))
+        var startY = if (yCount == 1) bTop+imageY else bTop%ih - (ih - (imageY % ih))
+
+        val endX = startX + (xCount * iw)
+        val endY = startY + (yCount * ih)
+
+        bgGraphics.setClip(marginThickness.left, marginThickness.top, bbWidth, bbHeight)
+        for (y <- startY until endY by ih) {
+          for (x <- startX until endX by iw) {
+            bgGraphics.drawImage(bi, x, y, bi.getWidth(), bi.getHeight(), null)
+          }
+        }
+        bgGraphics.dispose()
+      }
     }
 
     val borderRect = Rect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)

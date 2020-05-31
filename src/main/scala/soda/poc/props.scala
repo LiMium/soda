@@ -6,6 +6,14 @@ import java.awt.FontMetrics
 import cz.vutbr.web.css.NodeData
 import soda.layout.ViewPortProps
 import soda.layout.FontKey
+import javax.imageio.ImageIO
+import java.net.URL
+import cz.vutbr.web.css.TermURI
+import java.awt.image.BufferedImage
+import java.net.MalformedURLException
+import scala.util.Try
+import cz.vutbr.web.css.TermList
+import cz.vutbr.web.css.TermLengthOrPercent
 
 class L1Property[ST, CT] {
   var specified: Option[ST] = None
@@ -169,6 +177,14 @@ class StringProp(key: String, initial: String) extends Property[String, String, 
   }
 }
 
+class SimpleStringProp(key: String, initial: String) {
+  var specified: String = null
+  def getSpec(nd: NodeData) = Option(nd.getAsString(key, true))
+  def init(nd: NodeData) = {
+    specified = getSpec(nd).getOrElse(initial)
+  }
+}
+
 class Size {
   val width = new LengthProp("width", AutoLength)
   val height = new LengthProp("height", AutoLength)
@@ -313,6 +329,45 @@ class FontProp {
       }
     } else {
       s
+    }
+  }
+}
+
+class BackgroundProps() {
+  val color = new ColorProp("background-color")
+  val repeat = new SimpleStringProp("background-repeat", "repeat")
+  private var imgSpec: URL = null
+  var posX: TermLengthOrPercent = null
+  var posY: TermLengthOrPercent = null
+
+  def init(nd: NodeData) = {
+    color.init(nd, null)
+    repeat.init(nd)
+    val tu : TermURI = nd.getValue(classOf[TermURI], "background-image", false)
+    if (tu != null) {
+      imgSpec = try {
+        // TODO: ASCII escape the value, but it's not simple. Refer: https://stackoverflow.com/q/724043
+        new URL(tu.getBase(), tu.getValue())
+      } catch {
+        case _:MalformedURLException => println("Malformed URI: " + tu); null
+      }
+
+      val pos = nd.getValue(classOf[TermList], "background-position", false)
+      if (pos != null) {
+        posX = pos.get(0).asInstanceOf[TermLengthOrPercent]
+        posY = pos.get(1).asInstanceOf[TermLengthOrPercent]
+      } else {
+        posX = null
+        posY = null
+      }
+    }
+  }
+
+  def getBufImg: Option[BufferedImage] = {
+    if (imgSpec == null) {
+      None
+    } else {
+      Try(Option(ImageIO.read(imgSpec))).toOption.flatten
     }
   }
 }
