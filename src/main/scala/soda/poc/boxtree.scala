@@ -109,18 +109,12 @@ class BoxWithProps(
   }
 
   // formatting context established by this box
-  val formattingContext: Option[FormattingContext] = if (isRootElem || createsBFC) {
-    if (isReplaced) {
-      Some(new SimpleReplacedFormattingContext(img))
-    } else {
-      Some(new FlowFormattingContext(this))
-    }
+  val formattingContext: Option[FormattingContext] = if (isReplaced) {
+    Some(new SimpleReplacedFormattingContext(img))
+  } else if (isRootElem || createsBFC) {
+    Some(new FlowFormattingContext(this))
   } else {
-    if (isReplaced) {
-      Some(new SimpleReplacedFormattingContext(img))
-    } else {
-      None
-    }
+    None
   }
 
   val applicableFormattingContext: FormattingContext = formattingContext.getOrElse(domParentBox.map(_.applicableFormattingContext).get)
