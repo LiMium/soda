@@ -1,4 +1,4 @@
-package soda.poc
+package soda.layout
 
 import java.net.URL
 import javax.imageio.ImageIO
@@ -76,9 +76,9 @@ object Layout {
     // We create an initial containing block with dimensions equal to viewport and position: relative
     // This simplifies the computation of containing block to be a simpler recursive process
     val initCB = new BlockContent(null, None, "initial cb", new RenderProps(null, "visible", "visible", true)) {
-      def getFormattingContext(): soda.poc.FormattingContext = new FlowFormattingContext(null)
-      def getSubContent(): Vector[soda.poc.Content] = rootBoxP.getContents(this, vwProps)
-      val props: soda.poc.LayoutProps = new LayoutProps(
+      def getFormattingContext(): soda.layout.FormattingContext = new FlowFormattingContext(null)
+      def getSubContent(): Vector[soda.layout.Content] = rootBoxP.getContents(this, vwProps)
+      val props: soda.layout.LayoutProps = new LayoutProps(
         "block", "flow-root", "relative",
         ContentUtil.emptyOffsets, ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
         NoneLength, NoneLength, NoneLength, NoneLength, ContentUtil.emptyFontProp, ContentUtil.emptyOffsets)

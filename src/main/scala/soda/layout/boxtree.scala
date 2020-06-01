@@ -1,4 +1,4 @@
-package soda.poc
+package soda.layout
 
 import java.awt.Graphics2D
 import java.awt.Color
@@ -125,7 +125,7 @@ class BoxWithProps(
   val fontProp = new FontProp()
 
   // Level 3 properties
-  val size = new Size()
+  val size = new SizeProps()
   val border: Sides[Border] = new Sides[Border](new Border)
 
   def computeBorderProps(vwProps: ViewPortProps) = {

@@ -1,4 +1,4 @@
-package soda.poc
+package soda.layout
 
 import java.awt.Color
 import java.awt.Font
@@ -185,7 +185,7 @@ class SimpleStringProp(key: String, initial: String) {
   }
 }
 
-class Size {
+class SizeProps {
   val width = new LengthProp("width", AutoLength)
   val height = new LengthProp("height", AutoLength)
   val minWidth = new LengthProp("min-width", LengthProp.zeroAbsLength)

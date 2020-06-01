@@ -5,7 +5,7 @@ import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 
 import soda.dom.RenderableDocument
-import soda.poc.config
+import soda.layout.config
 
 object Renderer {
   def render(url: java.net.URL, userCSS: String) = {
@@ -42,9 +42,8 @@ object Renderer {
   }
 
   def renderNew(g2: Graphics2D, url: java.net.URL, width: Int, height: Int, userCSS: String) = {
-    import soda.poc._
+    import soda.layout._
     import soda.analysis.Analyser
-    import soda.layout.ViewPortProps
 
     val decoratedDOM = Analyser.process(url)
     val vwProps = ViewPortProps(width, height, 96, g2)

@@ -2,7 +2,7 @@ package soda.utils
 
 import soda.Parser
 import java.net.URL
-import soda.poc.config
+import soda.layout.config
 
 case class PositionedElement[T](elem: T, isFirst: Boolean, isLast: Boolean, index: Int)
 

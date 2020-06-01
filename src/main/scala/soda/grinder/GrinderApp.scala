@@ -17,7 +17,7 @@ import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import java.io.ByteArrayOutputStream
 import soda.utils.Util
-import soda.poc.config
+import soda.layout.config
 
 object GrinderApp {
   val ss = new ServerSocket(0)

@@ -15,7 +15,7 @@ import cz.vutbr.web.css.RuleSet
 import soda.utils.Util
 import cz.vutbr.web.css.MediaSpec
 import soda.dom._
-import soda.poc._
+import soda.layout._
 import java.awt.Color
 
 object Analysis {
