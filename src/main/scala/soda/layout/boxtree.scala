@@ -90,7 +90,7 @@ class BoxWithProps(
   val displayOuter = BoxUtil.displayOuterMap.getOrElse(displayComputed, "block")
   val displayInner = BoxUtil.displayInnerMap.getOrElse(displayComputed, displayComputed)
 
-  lazy val createsBFC = {
+  private lazy val createsBFC = {
     val floatProp = elemNode.floatProp.get
     floatProp == "left" || floatProp == "right" || positionProp == "absolute" || positionProp == "fixed" || displayInner == "flow-root"
     // TODO: Add more conditions
@@ -109,7 +109,7 @@ class BoxWithProps(
   }
 
   // formatting context established by this box
-  val formattingContext: Option[FormattingContext] = if (isReplaced) {
+  private val formattingContext: Option[FormattingContext] = if (isReplaced) {
     Some(new SimpleReplacedFormattingContext(img))
   } else if (isRootElem || createsBFC) {
     Some(new FlowFormattingContext(this))
@@ -117,18 +117,18 @@ class BoxWithProps(
     None
   }
 
-  val applicableFormattingContext: FormattingContext = formattingContext.getOrElse(domParentBox.map(_.applicableFormattingContext).get)
+  private val applicableFormattingContext: FormattingContext = formattingContext.getOrElse(domParentBox.map(_.applicableFormattingContext).get)
 
   // Level2 Properties
-  val backgroundProps = new BackgroundProps()
+  private val backgroundProps = new BackgroundProps()
   val colorProp = new ColorProp("color")
   val fontProp = new FontProp()
 
   // Level 3 properties
-  val size = new SizeProps()
-  val border: Sides[Border] = new Sides[Border](new Border)
+  private val size = new SizeProps()
+  private val border: Sides[Border] = new Sides[Border](new Border)
 
-  def computeBorderProps(vwProps: ViewPortProps) = {
+  private def computeBorderProps(vwProps: ViewPortProps) = {
     val nd = elemNode.nd
     val currColor = colorProp.computed
     border.forEach{(name, side) =>
@@ -156,12 +156,12 @@ class BoxWithProps(
     }
   }
 
-  var overflowX = "visible"
-  var overflowY = "visible"
+  private var overflowX = "visible"
+  private var overflowY = "visible"
   var visibility = true
-  var textAlignOpt:Option[String] = None
+  private var textAlignOpt:Option[String] = None
 
-  def computeSelfL2Props(vwProps: ViewPortProps) = {
+  private def computeSelfL2Props(vwProps: ViewPortProps) = {
     val nd = elemNode.nd
     val parentColor = domParentBox.map(_.colorProp.computed).getOrElse(Color.BLACK)
     // println(debugId + ": " + parentColor)
@@ -195,13 +195,13 @@ class BoxWithProps(
     computeL2Props(vwProps)
   }
 
-  val blockLevel = displayOuter == "block"
+  private val blockLevel = displayOuter == "block"
 
   def dump(level: Int): String = {
     ("  " * level) + s"$debugId\n" + boxyDomChildren.map(_.dump(level + 1)).mkString("\n")
   }
 
-  def computePaddings(paddingThickness: Sides[LengthSpec]) = {
+  private def computePaddings(paddingThickness: Sides[LengthSpec]) = {
     paddingThickness.left = size.paddingLeft.specified
     paddingThickness.right = size.paddingRight.specified
     paddingThickness.top = size.paddingTop.specified
