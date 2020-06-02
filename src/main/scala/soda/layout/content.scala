@@ -193,7 +193,7 @@ abstract class BlockContent(val parent: Content, canPaintOpt: Option[CanPaint], 
   val displayOuter = "block"
   def paintSelf(g: Graphics2D): Unit = {
     canPaintOpt.foreach(cp => {
-      cp.paint(g)
+      cp.paint(g, box)
     })
     if (config.paintDebugLevel > 1) {
       g.setColor(Color.magenta.darker())

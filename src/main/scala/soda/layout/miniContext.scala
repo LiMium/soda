@@ -3,7 +3,7 @@ package soda.layout
 import java.awt.Graphics2D
 import soda.utils.Util
 
-trait MiniContext[T <: Content] extends CanPaint {
+trait MiniContext[T <: Content] {
   def add(c: T):Unit
   def getHeight: Int
   def paint(g:Graphics2D):Unit

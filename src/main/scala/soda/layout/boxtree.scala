@@ -10,7 +10,7 @@ import java.net.URL
 import javax.imageio.ImageIO
 
 trait CanPaint {
-  def paint(g: Graphics2D): Unit
+  def paint(g: Graphics2D, box: Box): Unit
 }
 
 sealed trait BoxTreeNode {
@@ -240,24 +240,20 @@ class BoxWithProps(
     if (isReplaced) {
       if (displayOuter == "block") {
         if (tag == "img") {
-          val painter = new CanPaint {
-            var c: Content = _
-            def paint(g: Graphics2D): Unit = {
-              g.drawImage(img, 0, 0, c.box.contentWidth, c.box.contentHeight, null)
-            }
+          val painter: CanPaint = (g: Graphics2D, box: Box) => {
+            g.drawImage(img, 0, 0, box.contentWidth, box.contentHeight, null)
           }
-          val c = new BlockContent(aParent, Some(painter), "blck replaced " + debugId, renderPropsComputed) {
+          Vector(new BlockContent(aParent, Some(painter), "blck replaced " + debugId, renderPropsComputed) {
               def getFormattingContext() = applicableFormattingContext
               def getSubContent() = Vector.empty
               val props = new LayoutProps(
                 displayOuter, displayInner, positionProp,
-                new Sides[LengthSpec](NoneLength), border, paddingThickness,
+                marginSpecified, border, paddingThickness,
                 getReplacedWidth, compMinWidth, compMaxWidth,
                 getReplacedHeight, fontProp, offsets)
               override def toString = "blk cntnt wrpr for " + debugId
             }
-          painter.c = c
-          Vector(c)
+          )
         } else {
           // TODO
           println("TODO: " + debugId)
