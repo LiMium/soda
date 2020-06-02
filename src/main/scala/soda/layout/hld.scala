@@ -76,7 +76,7 @@ object Layout {
     // We create an initial containing block with dimensions equal to viewport and position: relative
     // This simplifies the computation of containing block to be a simpler recursive process
     val initCB = new BlockContent(null, None, "initial cb", new RenderProps(null, "visible", "visible", true)) {
-      def getFormattingContext(): soda.layout.FormattingContext = new FlowFormattingContext(null)
+      def getFormattingContext(): soda.layout.FormattingContext = new FlowFormattingContext
       def getSubContent(): Vector[soda.layout.Content] = rootBoxP.getContents(this, vwProps)
       val props: soda.layout.LayoutProps = new LayoutProps(
         "block", "flow-root", "relative",

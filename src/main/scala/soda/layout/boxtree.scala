@@ -112,7 +112,7 @@ class BoxWithProps(
   private val formattingContext: Option[FormattingContext] = if (isReplaced) {
     Some(new SimpleReplacedFormattingContext(img))
   } else if (isRootElem || createsBFC) {
-    Some(new FlowFormattingContext(this))
+    Some(new FlowFormattingContext)
   } else {
     None
   }

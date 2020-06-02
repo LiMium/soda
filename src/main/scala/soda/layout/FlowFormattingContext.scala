@@ -255,7 +255,7 @@ class BlockMiniContext(c: Content, fc: FormattingContext, parentMarginCollapseTo
   def isNotEmpty = blocks.nonEmpty
 }
 
-final class FlowFormattingContext(estBox: BoxWithProps) extends FormattingContext {
+final class FlowFormattingContext extends FormattingContext {
   private def marginTranslate(c: Content, m: LengthSpec): Option[Int] = {
     c.resolveLength(m, 0, None, Some(0))
   }
