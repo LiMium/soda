@@ -92,7 +92,7 @@ class BoxWithProps(
 
   private lazy val createsBFC = {
     val floatProp = elemNode.floatProp.get
-    floatProp == "left" || floatProp == "right" || positionProp == "absolute" || positionProp == "fixed" || displayInner == "flow-root"
+    floatProp == "left" || floatProp == "right" || positionProp == "absolute" || positionProp == "fixed" || displayInner == "flow-root" || displayInner == "table-cell"
     // TODO: Add more conditions
   }
 
@@ -111,6 +111,8 @@ class BoxWithProps(
   // formatting context established by this box
   private val formattingContext: Option[FormattingContext] = if (isReplaced) {
     Some(new SimpleReplacedFormattingContext(img))
+  } else if (displayInner == "table") {
+    Some(new TableFormattingContext)
   } else if (isRootElem || createsBFC) {
     Some(new FlowFormattingContext)
   } else {

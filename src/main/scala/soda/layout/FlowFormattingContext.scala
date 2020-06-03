@@ -125,10 +125,10 @@ class InlineMiniContext(level: Int, textAlign: String, lc: LayoutConstraints) ex
         val newLC = lc.copy(widthConstraint = newWc)
         ir.getFormattingContext().innerLayout(ir, 0, newLC)
       } else {
-        val iWidth = ir.resolveLength(ir.props.width, maxLineWidth, autoValue = Some(maxLineWidth), noneValue = None).getOrElse(0)
+        val iWidth = ir.resolveLength(ir.props.width, Some(maxLineWidth), autoValue = Some(maxLineWidth), noneValue = None).getOrElse(0)
         ir.box.contentWidth = iWidth
 
-        val iHeightOpt = ir.resolveLength(ir.props.height, 0, autoValue = None, noneValue = Some(0))
+        val iHeightOpt = ir.resolveLength(ir.props.height, None, autoValue = None, noneValue = Some(0))
         iHeightOpt.foreach {iHeight =>
           ir.box.contentHeight = iHeight
         }
@@ -270,7 +270,9 @@ final class FlowFormattingContext extends FormattingContext {
       c.box.offsetY -= marginCollapseOffset
     }
 
-    val heightDefinedOpt = c.resolveLength(c.props.height, if (c.parent != null) c.containingHeight else 0, autoValue = None, noneValue = None)
+    // println(s"  width: $width")
+
+    val heightDefinedOpt = c.resolveLength(c.props.height, if (c.parent != null) Some(c.containingHeight) else None, autoValue = None, noneValue = None)
     heightDefinedOpt foreach {hd => c.box.contentHeight = hd}
 
     val newWc = lc.widthConstraint match {
@@ -338,7 +340,7 @@ final class FlowFormattingContext extends FormattingContext {
   }
 
   def preferredWidths(c: Content): PrefWidths = {
-    val rwOpt = c.resolveLength(c.props.width, c.containingWidth, autoValue = None, noneValue = None)
+    val rwOpt = c.resolveLength(c.props.width, Some(c.containingWidth), autoValue = None, noneValue = None)
     val pwResult = rwOpt.map(rw => PrefWidths(rw, rw)).getOrElse({
       var prefMinWidth = 0
       var prefWidth = 0

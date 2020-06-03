@@ -31,8 +31,8 @@ final class SimpleReplacedFormattingContext(img: BufferedImage) extends Formatti
   private val intrinsicHeight = { if (img != null) img.getHeight() else 0 }
 
   private def resolveDim(c: Content): (Int, Int) = {
-    val widthOpt = c.resolveLength(c.props.width, c.containingWidth, autoValue = None, noneValue = None)
-    val heightOpt = c.resolveLength(c.props.height, c.containingHeight, autoValue = None, noneValue = None)
+    val widthOpt = c.resolveLength(c.props.width, Some(c.containingWidth), autoValue = None, noneValue = None)
+    val heightOpt = c.resolveLength(c.props.height, Some(c.containingHeight), autoValue = None, noneValue = None)
     (widthOpt, heightOpt) match {
       case (Some(width), Some(height)) => (width, height)
       case (Some(width), None) => (width, ((width.toFloat/intrinsicWidth) * intrinsicHeight).toInt)
@@ -98,7 +98,7 @@ object FCUtil {
       val absLC = new LayoutConstraints(FitToShrink(cWidth), FitToShrink(cHeight), lc.vwProps)
       abs.getFormattingContext().innerLayout(abs, 0, absLC)
 
-      def resolveAbsLength(s: LengthSpec, cl: Int) = { abs.resolveLength(s, cl, autoValue = None, noneValue = None) }
+      def resolveAbsLength(s: LengthSpec, cl: Int) = { abs.resolveLength(s, Some(cl), autoValue = None, noneValue = None) }
 
       val topOpt = resolveAbsLength(abs.props.offsets.top, cHeight)
       val bottomOpt = resolveAbsLength(abs.props.offsets.bottom, cHeight)
@@ -120,7 +120,7 @@ object FCUtil {
   }
 
   private def marginTranslate(c: Content, m: LengthSpec): Option[Int] = {
-    c.resolveLength(m, 0, None, Some(0))
+    c.resolveLength(m, None, None, Some(0))
   }
 
   private def constrainWidth(tentativeWidth: Int, compMinWidth: Int, compMaxWidth: Option[Int]) = {
@@ -137,7 +137,7 @@ object FCUtil {
     val avlWidth = lc.widthConstraint.avl - c.box.marginBoxSansContentWidth
 
     val containingWidth = c.containingWidth
-    val cWidth = c.resolveLength(c.props.width, containingWidth, None, None)
+    val cWidth = c.resolveLength(c.props.width, Some(containingWidth), None, None)
 
     val cMarginLeft = marginTranslate(c, c.props.margin.left)
     val cMarginRight = marginTranslate(c, c.props.margin.right)
@@ -162,7 +162,7 @@ object FCUtil {
     c.box.marginThickness.right = marginRight
 
     val minWidth = c.resolveLength(c.props.compMinWidth, containingWidth).getOrElse(0)
-    val maxWidth = c.resolveLength(c.props.compMaxWidth, containingWidth, autoValue = None, None)
+    val maxWidth = c.resolveLength(c.props.compMaxWidth, Some(containingWidth), autoValue = None, None)
     val (width, _) = constrainWidth(tentativeWidth, minWidth, maxWidth)
 
     c.box.contentWidth = width

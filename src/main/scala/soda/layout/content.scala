@@ -119,21 +119,21 @@ sealed trait Content {
 
   // util
   def resolveLength(lengthSpec: LengthSpec, containingBlockLength: Float): Option[Int] = {
-    resolveLength(lengthSpec, containingBlockLength, Some(containingBlockLength.toInt), Some(0))
+    resolveLength(lengthSpec, Some(containingBlockLength), Some(containingBlockLength.toInt), Some(0))
   }
 
-  def resolveLength(lengthSpec: LengthSpec, containingBlockLength: Float, autoValue: Option[Int], noneValue: Option[Int]) = {
+  def resolveLength(lengthSpec: LengthSpec, containingBlockLengthOpt: Option[Float], autoValue: Option[Int], noneValue: Option[Int]) = {
     lengthSpec match {
       case AbsLength(pxs) => Some(pxs.toInt)
       case frl: FontRelLength => Some(frl.compute(props.fontProp).toInt)
-      case PercentLength(scale) => Some((scale * containingBlockLength).toInt)
+      case PercentLength(scale) => containingBlockLengthOpt.map(l => (l * scale ).toInt)
       case AutoLength => autoValue
       case NoneLength => noneValue
       case x => Util.warnln("Not handled: " + x); Some(0)
     }
   }
   private def findRelativeOffset(factor:Int, parentLength: Float, propName: String, vwProps: ViewPortProps) = {
-    resolveLength(props.offsets.byName(propName), parentLength, autoValue = None, noneValue = None).map(_ * factor)
+    resolveLength(props.offsets.byName(propName), Some(parentLength), autoValue = None, noneValue = None).map(_ * factor)
   }
 
   private def findRootContentNode: Content = {
@@ -177,7 +177,7 @@ sealed trait Content {
     val result = new SidesInt()
 
     def resolve(spec: LengthSpec) = {
-      resolveLength(spec, containingWidth, autoValue=Some(0), noneValue = None).getOrElse(0)
+      resolveLength(spec, Some(containingWidth), autoValue=Some(0), noneValue = None).getOrElse(0)
     }
 
     // Note: percentage values for padding always refer to containing width and not height
@@ -188,7 +188,7 @@ sealed trait Content {
     result
   }
 
-  def hydrateSimpleProps() = {
+  def hydrateSimpleProps(): Unit = {
     box.border = props.border
     box.paddingThickness = computePaddings()
   }
