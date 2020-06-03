@@ -316,6 +316,8 @@ class FontProp {
     ascent = fontMetrics.getAscent()
   }
 
+  def fullHeight = fontMetrics.getHeight()
+
   def emHeight = size
 
   def estWidth(str: String) = fontMetrics.stringWidth(str)

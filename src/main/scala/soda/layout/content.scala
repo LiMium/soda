@@ -237,7 +237,7 @@ final class InlineWordRenderable(val parent: Content, word: String, visibility: 
   }
 
   private val estWidth = AbsLength(fontProp.estWidth(word))
-  private val estHeight = AbsLength(fontProp.size)
+  private val estHeight = AbsLength(fontProp.fullHeight)
   val isBreak: Boolean = false
   override val isSpace: Boolean = word == " "
   val props = new LayoutProps(
