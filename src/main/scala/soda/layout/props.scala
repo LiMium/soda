@@ -250,7 +250,7 @@ class FontProp {
 
   def init(nd: NodeData, pFontProp: Option[FontProp], vwProps: ViewPortProps) = {
     val computedSize = Property.getSpec(nd, "font-size") match {
-      case None => vwProps.fontSizeMap("medium")
+      case None => pFontProp.map(_.size).getOrElse(vwProps.fontSizeMap("medium"))
       case Some(spec) => {
         if (vwProps.fontSizeMap.isDefinedAt(spec)) {
           vwProps.fontSizeMap(spec)
