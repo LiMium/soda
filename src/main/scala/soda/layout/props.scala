@@ -306,14 +306,7 @@ class FontProp {
     ))
     fontMetrics = vwProps.getFontMetrics(font)
 
-    // Following the same workaround as gngr
-    // TODO: This could be solved using font ascent
-    exHeight = if (family.contains("Ahem")) {
-      (0.8 * font.getSize2D).toInt
-    } else {
-      val glyphVector = font.createGlyphVector(fontMetrics.getFontRenderContext(), "xuwz")
-      (glyphVector.getVisualBounds.getHeight).toInt
-    }
+    exHeight = math.round(vwProps.getLineMetrics(font, "xuwz").getAscent())
     ascent = fontMetrics.getAscent()
   }
 
