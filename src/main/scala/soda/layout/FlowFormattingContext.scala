@@ -302,7 +302,7 @@ final class FlowFormattingContext extends FormattingContext {
   }
 
   def innerLayout(c: Content, marginCollapseTopAvl: Int, lc: LayoutConstraints) = {
-    Util.logLayout(1, s"inner layout of $c", c.level)
+    Util.logLayout(1, s"  inner layout of $c", c.level)
 
     c.box.border = c.props.border
     c.box.paddingThickness = c.computePaddings()
@@ -440,7 +440,7 @@ final class FlowFormattingContext extends FormattingContext {
         abs.box.offsetX = leftOpt.get
       }
     }
-    Util.logLayout(1, s"done inner layout of $c, dim: ${c.box.marginBoxWidth} x ${c.box.marginBoxHeight}", c.level)
+    Util.logLayout(1, s"✓ inner layout of $c, dim: ${c.box.marginBoxWidth} x ${c.box.marginBoxHeight}", c.level)
 
     c.box.marginBoxHeight - marginCollapseOffset
   }
