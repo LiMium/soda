@@ -225,7 +225,7 @@ final class InlineBreak(val parent: Content) extends InlineRenderable {
   val renderProps: RenderProps = new RenderProps(null, "visible", "visible", true)
 }
 
-final class InlineWordRenderable(val parent: Content, word: String, visibility: Boolean, colorProp: ColorProp, fontProp: FontProp) extends InlineRenderable {
+final class InlineWordRenderable(val parent: Content, word: String, visibility: Boolean, colorProp: ColorProp, fontProp: FontProp, vwProps: ViewPortProps) extends InlineRenderable {
   override def toString = s"word '$word' est: $estWidth x $estHeight"
   def paintSelf(g: Graphics2D): Unit = {
     if (visibility) {
@@ -236,8 +236,11 @@ final class InlineWordRenderable(val parent: Content, word: String, visibility: 
     }
   }
 
+  private val measuredHeight = vwProps.getLineMetrics(fontProp.font, word).getHeight
+
   private val estWidth = AbsLength(fontProp.estWidth(word))
-  private val estHeight = AbsLength(fontProp.fullHeight)
+  private val estHeight = AbsLength(math.round(measuredHeight))
+
   val isBreak: Boolean = false
   override val isSpace: Boolean = word == " "
   val props = new LayoutProps(

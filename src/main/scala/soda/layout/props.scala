@@ -307,6 +307,7 @@ class FontProp {
     fontMetrics = vwProps.getFontMetrics(font)
 
     // Following the same workaround as gngr
+    // TODO: This could be solved using font ascent
     exHeight = if (family.contains("Ahem")) {
       (0.8 * font.getSize2D).toInt
     } else {
@@ -315,8 +316,6 @@ class FontProp {
     }
     ascent = fontMetrics.getAscent()
   }
-
-  def fullHeight = fontMetrics.getHeight()
 
   def emHeight = size
 

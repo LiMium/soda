@@ -29,6 +29,10 @@ case class ViewPortProps(width: Int, height: Int, dpi: Int, g2: Graphics2D) {
     g2.getFontMetrics(font)
   }
 
+  def getLineMetrics(font: Font, str: String) = {
+    font.getLineMetrics(str, g2.getFontRenderContext())
+  }
+
   val borderSizeThick = 18
   val borderSizeMedium = 12
   val borderSizeThin = 6

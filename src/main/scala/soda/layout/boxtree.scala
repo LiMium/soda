@@ -35,7 +35,7 @@ case object GridContainerBoxType extends InnerBoxType
 class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends BoxTreeNode {
   def getContents(parent: Content, vwProps:ViewPortProps): Vector[Content] = {
     val words = getWords
-    words.map(w => new InlineWordRenderable(parent, w, creator.visibility, creator.colorProp, creator.fontProp)).toVector
+    words.map(w => new InlineWordRenderable(parent, w, creator.visibility, creator.colorProp, creator.fontProp, vwProps)).toVector
   }
 
   def initProps(vwProps: ViewPortProps):Unit = {}
