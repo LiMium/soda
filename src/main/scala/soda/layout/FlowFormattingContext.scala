@@ -385,33 +385,8 @@ final class FlowFormattingContext extends FormattingContext {
       c.box.contentHeight = c.miniContext.getHeight
     }
 
-    // TODO: Move this to base class
-    c.absolutes.foreach {abs =>
-      val cWidth = abs.containingWidth
-      val cHeight = abs.containingHeight
+    positionAbsolutes(c, lc)
 
-      val absLC = new LayoutConstraints(FitToShrink(cWidth), FitToShrink(cHeight), lc.vwProps)
-      abs.getFormattingContext().innerLayout(abs, 0, absLC)
-
-      def resolveAbsLength(s: LengthSpec, cl: Int) = { abs.resolveLength(s, cl, autoValue = None, noneValue = None) }
-
-      val topOpt = resolveAbsLength(abs.props.offsets.top, cHeight)
-      val bottomOpt = resolveAbsLength(abs.props.offsets.bottom, cHeight)
-      val leftOpt = resolveAbsLength(abs.props.offsets.left, cWidth)
-      val rightOpt = resolveAbsLength(abs.props.offsets.right, cWidth)
-
-      if (topOpt.isDefined) {
-        abs.box.offsetY = topOpt.get
-      } else if (bottomOpt.isDefined) {
-        abs.box.offsetY = cHeight - (abs.box.marginBoxHeight + bottomOpt.get)
-      }
-
-      if (rightOpt.isDefined) {
-        abs.box.offsetX = cWidth - (abs.box.marginBoxWidth + rightOpt.get)
-      } else if (leftOpt.isDefined) {
-        abs.box.offsetX = leftOpt.get
-      }
-    }
     Util.logLayout(1, s"✓ inner layout of $c, dim: ${c.box.marginBoxWidth} x ${c.box.marginBoxHeight}", c.level)
 
     c.box.marginBoxHeight - marginCollapseOffset
