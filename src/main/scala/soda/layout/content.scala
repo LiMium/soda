@@ -244,7 +244,7 @@ final class InlineWordRenderable(val parent: Content, word: String, visibility: 
   private val measuredHeight = vwProps.getLineMetrics(fontProp.font, word).getHeight
 
   private val estWidth = AbsLength(fontProp.estWidth(word))
-  private val estHeight = AbsLength(math.round(measuredHeight))
+  private val estHeight = AbsLength(Util.relaxedCeiling(measuredHeight))
 
   val isBreak: Boolean = false
   override val isSpace: Boolean = word == " "

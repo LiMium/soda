@@ -32,4 +32,14 @@ object Util {
       println(("."*indentLevel) + s)
     }
   }
+
+  /**
+    * Like ceiling(), but behaves like floor() when values are near to the floor
+    *
+    * @param x
+    * @param floorClearance   The threshold within which values are considered close to floor
+    * @return
+    */
+  def relaxedCeiling(x: Float, floorClearance: Float = 0.01f) = math.round((0.5f - floorClearance) + x)
+
 }

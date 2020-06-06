@@ -14,6 +14,7 @@ import java.net.MalformedURLException
 import scala.util.Try
 import cz.vutbr.web.css.TermList
 import cz.vutbr.web.css.TermLengthOrPercent
+import soda.utils.Util
 
 class L1Property[ST, CT] {
   var specified: Option[ST] = None
@@ -307,7 +308,7 @@ class FontProp {
     ))
     fontMetrics = vwProps.getFontMetrics(font)
 
-    exHeight = math.round(vwProps.getLineMetrics(font, "xuwz").getAscent())
+    exHeight = Util.relaxedCeiling(vwProps.getLineMetrics(font, "xuwz").getAscent())
     ascent = fontMetrics.getAscent()
   }
 
