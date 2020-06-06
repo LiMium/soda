@@ -14,7 +14,7 @@ final private class TableCell(val c: Content) {
   }
 }
 
-final private class TableRow {
+final private class TableRow(startX: Int) {
   private var cells = Vector[TableCell]()
 
   def addCell(c: Content): Unit = {
@@ -40,7 +40,7 @@ final private class TableRow {
   }
 
   def layout(offsetY: Int, widths: Vector[Int], vwProps: ViewPortProps):Int = {
-    var currX = 0
+    var currX = startX
     var maxHeight = 0
     cells.zip(widths) foreach {case (cell, totalWidth) =>
       val c = cell.c
@@ -63,10 +63,11 @@ final private class TableRow {
 
 final private class TableFixedLayoutMiniContext(tableContent: Content) extends MiniContext[Content] {
   private var rows = Vector[TableRow]()
-  private var currY = 0
+  private var currY = tableContent.box.contentOffsetY
+  private val startX = tableContent.box.contentOffsetX
 
   override def add(c: Content): Unit = {
-    val row = new TableRow()
+    val row = new TableRow(startX)
     println("Adding row: " + c)
     c.getSubContent().foreach {cellContent =>
       if (cellContent.props.displayInner == "table-cell") {
@@ -98,13 +99,14 @@ final private class TableFixedLayoutMiniContext(tableContent: Content) extends M
 
       case None =>
     }
-
   }
 }
 
 final class TableFormattingContext extends FormattingContext {
 
   override def innerLayout(c: Content, marginCollapseTopAvl: Int, constraints: LayoutConstraints): Int = {
+    c.hydrateSimpleProps()
+
     val mc = new TableFixedLayoutMiniContext(c)
     c.getSubContent() foreach {tc =>
       val tcInner = tc.props.displayInner
@@ -120,7 +122,9 @@ final class TableFormattingContext extends FormattingContext {
     }
     mc.finishLayout(constraints.vwProps)
     c.miniContext = mc
-    mc.getHeight
+    val mcHeight = mc.getHeight
+    c.box.contentHeight = mc.getHeight
+    mcHeight
   }
 
   override def preferredWidths(c: Content): PrefWidths = {
