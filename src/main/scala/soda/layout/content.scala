@@ -187,6 +187,11 @@ sealed trait Content {
     result.left = resolve(paddingSpec.left)
     result
   }
+
+  def hydrateSimpleProps() = {
+    box.border = props.border
+    box.paddingThickness = computePaddings()
+  }
 }
 
 abstract class BlockContent(val parent: Content, canPaintOpt: Option[CanPaint], debugStr: String, val renderProps: RenderProps) extends Content {

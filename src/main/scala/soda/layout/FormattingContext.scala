@@ -54,3 +54,40 @@ final class SimpleReplacedFormattingContext(img: BufferedImage) extends Formatti
     PrefWidths(w, w)
   }
 }
+
+object FCUtil {
+  private def natural(i: Int) = if (i < 0) 0 else i
+
+  /**
+    * compute widths and margins as per CSS2.2 section 10.3.3: Block-level non replaced elements
+    *
+    * @param widthOpt
+    * @param avlWidth   :  Here available width is expected to be totalAvlWidth - (borderWidth + paddingWidth)
+    * @param borderPaddingWidth
+    * @param compMarginLeft
+    * @param compMarginRight
+    */
+  def computeWidthMargins(widthOpt: Option[Int], avlWidth: Int, compMarginLeft: Option[Int], compMarginRight: Option[Int]) = {
+    widthOpt match {
+      case None =>
+          val mLeft = compMarginLeft.getOrElse(0)
+          val mRight = compMarginRight.getOrElse(0)
+          val rem = avlWidth - (mLeft + mRight)
+          (rem, mLeft, mRight)
+      case Some(width) =>
+        if (compMarginLeft.isDefined) {
+          // overconstrained, marginRight has to absorb the difference
+          val rem = natural(avlWidth - (width + compMarginLeft.get))
+          (width, compMarginLeft.get, rem)
+        } else if (compMarginRight.isDefined) {
+          val rem = natural(avlWidth - (width + compMarginRight.get))
+          (width, rem, compMarginRight.get)
+        } else {
+          val rem = natural(avlWidth - width)
+          val remBy2 = rem/2
+          (width, remBy2, rem - remBy2)
+        }
+    }
+  }
+
+}
