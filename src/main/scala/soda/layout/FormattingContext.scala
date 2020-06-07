@@ -118,4 +118,56 @@ object FCUtil {
       }
     }
   }
+
+  private def marginTranslate(c: Content, m: LengthSpec): Option[Int] = {
+    c.resolveLength(m, 0, None, Some(0))
+  }
+
+  private def constrainWidth(tentativeWidth: Int, compMinWidth: Int, compMaxWidth: Option[Int]) = {
+    val widthMinChecked = math.max(compMinWidth, tentativeWidth)
+    val widthMaxChecked = compMaxWidth.map(math.min(_, widthMinChecked)).getOrElse(widthMinChecked)
+    (widthMaxChecked, widthMaxChecked != tentativeWidth)
+  }
+
+  def finaliseWidthMargins(c: Content, lc: LayoutConstraints): Int = {
+    c.box.marginThickness.top = marginTranslate(c, c.props.margin.top).getOrElse(0)
+    c.box.marginThickness.bottom = marginTranslate(c, c.props.margin.bottom).getOrElse(0)
+
+    // TODO: The below subtraction could be done by the caller of innerLayout
+    val avlWidth = lc.widthConstraint.avl - c.box.marginBoxSansContentWidth
+
+    val containingWidth = c.containingWidth
+    val cWidth = c.resolveLength(c.props.width, containingWidth, None, None)
+
+    val cMarginLeft = marginTranslate(c, c.props.margin.left)
+    val cMarginRight = marginTranslate(c, c.props.margin.right)
+
+    val isShrinkToFit = lc.widthConstraint match {
+      case FitAvailable(avl) => false
+      case FitToShrink(avl) => true
+    }
+
+    val (tentativeWidth, marginLeft, marginRight) = if (!isShrinkToFit) {
+      computeWidthMargins(cWidth, avlWidth, cMarginLeft, cMarginRight)
+    } else {
+      val mLeft = cMarginLeft.getOrElse(0)
+      val mRight = cMarginRight.getOrElse(0)
+      val actualAvlWidth = avlWidth - (mLeft + mRight + c.box.paddingWidth + c.box.borderWidth)
+      val pw = c.getFormattingContext.preferredWidths(c)
+      val shrinkToFitWidth = math.min(math.max(pw.prefMinWidth, actualAvlWidth), pw.prefWidth)
+      (shrinkToFitWidth, mLeft, mRight)
+    }
+
+    c.box.marginThickness.left = marginLeft
+    c.box.marginThickness.right = marginRight
+
+    val minWidth = c.resolveLength(c.props.compMinWidth, containingWidth).getOrElse(0)
+    val maxWidth = c.resolveLength(c.props.compMaxWidth, containingWidth, autoValue = None, None)
+    val (width, _) = constrainWidth(tentativeWidth, minWidth, maxWidth)
+
+    c.box.contentWidth = width
+
+    width
+  }
+
 }
