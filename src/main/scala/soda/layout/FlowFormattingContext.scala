@@ -300,8 +300,6 @@ final class FlowFormattingContext extends FormattingContext {
     c.box.marginThickness.left = marginLeft
     c.box.marginThickness.right = marginRight
 
-    // println(c)
-    // println(s"  Tentative width: $tentativeWidth, minWidth: ${c.props.compMinWidth} maxWidth: ${c.props.compMaxWidth}")
     val minWidth = c.resolveLength(c.props.compMinWidth, containingWidth).getOrElse(0)
     val maxWidth = c.resolveLength(c.props.compMaxWidth, containingWidth, autoValue = None, None)
     val (width, _) = constrainWidth(tentativeWidth, minWidth, maxWidth)
@@ -322,8 +320,6 @@ final class FlowFormattingContext extends FormattingContext {
     if (marginCollapseOffset > 0) {
       c.box.offsetY -= marginCollapseOffset
     }
-
-    // println(s"  width: $width")
 
     val heightDefinedOpt = c.resolveLength(c.props.height, if (c.parent != null) c.containingHeight else 0, autoValue = None, noneValue = None)
     heightDefinedOpt foreach {hd => c.box.contentHeight = hd}
