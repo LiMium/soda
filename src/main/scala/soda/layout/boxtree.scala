@@ -277,17 +277,19 @@ class BoxWithProps(
         })
       }
     } else {
+      val compProps = new LayoutProps(
+        displayOuter, displayInner, positionProp,
+        marginSpecified, border, paddingThickness,
+        widthSpecified, compMinWidth, compMaxWidth,
+        heightSpecified, fontProp, offsets,
+        textAlign)
+
       if (displayOuter == "block") {
         Vector(new BlockContent(aParent, None, debugId, renderPropsComputed) {
               def getFormattingContext() = applicableFormattingContext
               def getSubContent() = boxyDomChildren.flatMap(_.getContents(this, vwProps))
-              val props = new LayoutProps(
-                displayOuter, displayInner, positionProp,
-                marginSpecified, border, paddingThickness,
-                widthSpecified, compMinWidth, compMaxWidth,
-                heightSpecified, fontProp, offsets,
-                textAlign)
               override def toString = "blk cntnt wrpr for " + debugId
+              val props = compProps
             }
         )
       } else {
@@ -303,12 +305,7 @@ class BoxWithProps(
               override def getFormattingContext() = applicableFormattingContext
               override def getSubContent() = boxyDomChildren.flatMap(_.getContents(this, vwProps))
 
-              val props = new LayoutProps(
-                "inline", displayInner, positionProp,
-                marginSpecified, border, paddingThickness,
-                widthSpecified, compMinWidth, compMaxWidth,
-                heightSpecified, fontProp, offsets)
-
+              val props = compProps
               val renderProps: RenderProps = renderPropsComputed
             })
           } else {
