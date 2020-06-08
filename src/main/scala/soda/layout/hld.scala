@@ -30,7 +30,6 @@ object Layout {
     val rootBoxPOpt = generateBoxes(dn)
 
     val contentOpt = rootBoxPOpt map { rootBoxP =>
-      // println(rootBoxP.dump(0))
       rootBoxP.computeL2Props(vwProps)
 
       val content = layoutRoot(rootBoxP, vwProps)
@@ -43,36 +42,11 @@ object Layout {
 
   def generateBoxes(dn: DocumentNode): Option[BoxWithProps] = {
     val rootElem = dn.childElements.find(_.elem.isRootElem).get
-    // val initialCB = new InitialContainingBlock()
-    val rootBoxOpt = generateBoxElem(rootElem, None /*,ContainingBlockRef(ContentArea initialCB )*/)
-    /*
-    rootBoxOpt.foreach {rootBox =>
-      initialCB.setRootBox(rootBox)
-    }
-    */
+    val rootBoxOpt = generateBoxElem(rootElem, None)
     rootBoxOpt
   }
 
   def layoutRoot(rootBoxP: BoxWithProps, vwProps: ViewPortProps):Content = {
-    /*
-    val initFCOrig = new FormattingContext {
-      override def innerLayout(c: Content, lc: LayoutConstraints): Unit = {
-        val mc = new InitialMiniContext()
-        c.getSubContent().foreach { ch =>
-          mc.add(ch)
-          ch.box.offsetX = 0
-          ch.box.offsetY = 0
-          ch.getFormattingContext().innerLayout(ch, lc)
-        }
-        c.miniContext = mc
-        c.absolutes.foreach {abs =>
-          val absLC = new LayoutConstraints(FitToShrink(abs.containingWidth), FitToShrink(abs.containingHeight), lc.vwProps)
-          abs.getFormattingContext().innerLayout(abs, absLC)
-        }
-      }
-    }
-    */
-
     // We create an initial containing block with dimensions equal to viewport and position: relative
     // This simplifies the computation of containing block to be a simpler recursive process
     val initCB = new BlockContent(null, None, "initial cb", new RenderProps(null, "visible", "visible", true)) {
@@ -107,15 +81,10 @@ object Layout {
     }
   }
 
-  val absolutish = Array("absolute", "fixed")
-  val nonStatic = absolutish :+ "relative"
-
   private def generateBoxNode(dn: DecoratedNode, parentBox: BoxWithProps): Option[BoxTreeNode] = {
     dn match {
       case en: ElementNode => {
-        // val containingBlock = if (absolutish.contains(en.positionProp.get)) findContainingBlock(parentBox) else ContainingBlockRef(ContentArea, parentBox)
-        // val containingBlock = findContainingBlock(en.positionProp.get, parentBox)
-        generateBoxElem(en, Some(parentBox) /*, containingBlock*/)
+        generateBoxElem(en, Some(parentBox))
       }
       case tn: TextNode => {
         Some(new AnonBox(tn, parentBox))
