@@ -30,6 +30,8 @@ object Layout {
     val rootBoxPOpt = generateBoxes(dn)
 
     val contentOpt = rootBoxPOpt map { rootBoxP =>
+      rootBoxP.adjustChildren()
+      // println(rootBoxP.dump(0))
       rootBoxP.computeL2Props(vwProps)
 
       val content = layoutRoot(rootBoxP, vwProps)
@@ -76,7 +78,7 @@ object Layout {
       val boxWithProps = new BoxWithProps(en, domParentBox)
       val children = en.children.flatMap(generateBoxNode(_, boxWithProps))
 
-      boxWithProps.boxyDomChildren = children
+      boxWithProps.setBoxyDomChildren(children)
       Some(boxWithProps)
     }
   }

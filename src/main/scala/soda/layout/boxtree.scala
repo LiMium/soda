@@ -8,6 +8,7 @@ import soda.layout.ViewPortProps
 import java.awt.image.BufferedImage
 import java.net.URL
 import javax.imageio.ImageIO
+import scala.collection.mutable
 
 trait CanPaint {
   def paint(g: Graphics2D, box: Box): Unit
@@ -16,13 +17,15 @@ trait CanPaint {
 sealed trait BoxTreeNode {
   def getContents(parent: Content, vwProps: ViewPortProps): Vector[Content]
 
-  def initProps(vwProps: ViewPortProps):Unit
-
-  var boxyDomChildren : Vector[BoxTreeNode] = Vector.empty
-
   def dump(level: Int): String
 
   def computeL2Props(vwProps: ViewPortProps):Unit
+}
+
+sealed trait BoxTreeNodeProps extends BoxTreeNode {
+  val displayInner: String
+  def appendChild(btn: BoxTreeNode): Unit
+  def adjustChildren(): Unit
 }
 
 sealed trait InnerBoxType
@@ -38,8 +41,6 @@ class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends BoxTreeNode {
     words.map(w => new InlineWordRenderable(parent, w, creator.visibility, creator.colorProp, creator.fontProp, vwProps)).toVector
   }
 
-  def initProps(vwProps: ViewPortProps):Unit = {}
-
   private def split(s: String) = {
     val replaced = s.replaceAll("(\\s)+", " ")
     val all = collection.mutable.ArrayBuffer[String]()
@@ -53,17 +54,188 @@ class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends BoxTreeNode {
 
   def getWords = split(tn.text.text)
 
-  def dump(level: Int): String = {
-    ("  " * level) + "Anon:\n" + tn
+  def isJustSpace = {
+    val ws = getWords
+    ws.forall(_.isBlank())
   }
-  def computeL2Props(vwProps: ViewPortProps) = {}
+
+  def dump(level: Int): String = {
+    ("  " * level) + toString
+  }
+
+  override def toString = "Anon: " + getWords
+
+  def computeL2Props(vwProps: ViewPortProps): Unit = {}
+}
+
+class AnonGeneratedBox(aProps: LayoutProps, fcOpt: Option[FormattingContext]) extends BoxTreeNodeProps {
+  override def getContents(parent: Content, vwProps: ViewPortProps): Vector[Content] = {
+    // TODO: Check displayOuter and create block or inline content appropriately
+    val bgProps = new BackgroundProps()
+    val rp = new RenderProps(bgProps, "visible", "visible", true)
+    val fc = fcOpt.getOrElse(parent.getFormattingContext())
+    val content = new BlockContent(parent, None, "anon gen box", rp) {
+      def getFormattingContext() = fc
+      def getSubContent() = domChildren.flatMap(_.getContents(this, vwProps))
+      override def toString = "anon gen box"
+      val props = aProps
+    }
+    Vector(content)
+  }
+
+  val displayInner: String = aProps.displayInner
+
+  def dump(level: Int): String =
+    ("  " * level) + s"Anon gen box: ${aProps.displayInner}\n" + domChildren.map(_.dump(level + 1)).mkString("\n")
+
+  override def computeL2Props(vwProps: ViewPortProps): Unit = {domChildren.foreach{_.computeL2Props(vwProps)}}
+
+  private var domChildren = Vector[BoxTreeNode]()
+  def appendChild(btn: BoxTreeNode): Unit = {
+    domChildren :+= btn
+  }
+  def adjustChildren(): Unit = domChildren.foreach {case b: BoxTreeNodeProps => b.adjustChildren; case _ =>}
+
+  override def toString(): String = s"Anon gen box: ${aProps.displayInner}"
 }
 
 // Root box will have parentBlock == None
 class BoxWithProps(
   val elemNode: ElementNode,
   val domParentBox: Option[BoxWithProps]
-  ) extends BoxTreeNode {
+  ) extends BoxTreeNodeProps {
+
+  private var origDomChildren : Vector[BoxTreeNode] = Vector.empty
+  def setBoxyDomChildren(children: Vector[BoxTreeNode]) = {
+    origDomChildren = children
+  }
+
+  private var boxyDomChildren : Vector[BoxTreeNode] = Vector.empty
+  def appendChild(btn: BoxTreeNode): Unit = {
+    boxyDomChildren :+= btn
+  }
+
+  def adjustChildren(): Unit = {
+    val parentStack = mutable.Stack[BoxTreeNodeProps]()
+    parentStack.push(this)
+
+    def needParent(level: Int, needDIs: List[String]):Unit = {
+      // val index = math.min(parentStack.size - 1, level)
+      // val create = needDI != parentStack(index).displayInner
+      // val create = !parentStack.exists(_.displayInner == needDI)
+      // val create = parentStack.top.displayInner != needDI
+      val create = !needDIs.contains(parentStack.top.displayInner)
+      if (create) {
+        // println(s"  needed $needDIs @level $level, stack: ${parentStack.map(_.displayInner)} ${parentStack.size}")
+        if (needDIs.contains("table-cell")) {
+          needParent(level+1, List("table-row"))
+        } else if (needDIs.contains("table-row")) {
+          needParent(level+1, List("table-row-group", "table-header-group", "table-footer-group"))
+        } else if (needDIs.contains("table-row-group") || needDIs.contains("table-header-group") || needDIs.contains("table-footer-group") || needDIs.contains("table-column-group")) {
+          needParent(level+1, List("table"))
+        }
+        val needDI = needDIs.head
+        val props = new LayoutProps("block", needDI, "static",
+          new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
+          AutoLength, ContentUtil.zeroLength, NoneLength,
+          NoneLength, fontProp, ContentUtil.emptyOffsets)
+        val fcOpt = if (needDI == "table") Some(new TableFormattingContext()) else None
+        val anonGenBox = new AnonGeneratedBox(props, fcOpt)
+        // println("    pushing anon: " + needDI + " on top of " + parentStack.map(_.displayInner))
+        parentStack.push(anonGenBox)
+      }
+    }
+
+
+    def popSibling(siblingDI: String) = {
+      if (parentStack.size > 1) {
+        if (parentStack.top.displayInner == siblingDI) {
+          // println("Popping sibling: " + siblingDI)
+          val popped = parentStack.pop
+          parentStack.top.appendChild(popped)
+        }
+      }
+    }
+
+    def addWithChecks(child: BoxTreeNodeProps): Unit = {
+      // println(s"In $debugId $displayInner, adding child: $child ${child.displayInner}")
+      if (child.displayInner == "table-column") {
+        needParent(0, List("table-column-group"))
+      } else if (child.displayInner == "table-column-group") {
+        needParent(0, List("table"))
+      } else if (child.displayInner == "table-cell") {
+        popSibling("table-cell")
+        needParent(0, List("table-row"))
+      } else if (child.displayInner == "table-row") {
+        popSibling("table-column-group")
+        popSibling("table-row")
+        needParent(0, List("table-row-group", "table-header-group", "table-footer-group"))
+      } else if (child.displayInner == "table-row-group") {
+        popSibling("table-column-group")
+        popSibling("table-row")
+        popSibling("table-row-group")
+        popSibling("table-header-group")
+        popSibling("table-footer-group")
+        needParent(0, List("table"))
+      } else if (child.displayInner == "table-header-group") {
+        popSibling("table-column-group")
+        popSibling("table-row")
+        popSibling("table-row-group")
+        popSibling("table-header-group")
+        popSibling("table-footer-group")
+        needParent(0, List("table"))
+      } else if (child.displayInner == "table-footer-group") {
+        popSibling("table-column-group")
+        popSibling("table-row")
+        popSibling("table-row-group")
+        popSibling("table-header-group")
+        popSibling("table-footer-group")
+        needParent(0, List("table"))
+      } else {
+        if (parentStack.last.displayInner.startsWith("table")) {
+          // popSibling("table-cell")
+          needParent(0, List("table-cell"))
+        } else {
+          popSibling("table-column-group")
+          popSibling("table-cell")
+          popSibling("table-row")
+          popSibling("table-row-group")
+          popSibling("table-header-group")
+          popSibling("table-footer-group")
+          popSibling("table")
+        }
+      }
+      parentStack.top.appendChild(child)
+    }
+
+    def add(child: BoxTreeNode) = {
+      child match {
+        case ab: AnonBox => {
+          if (ab.isJustSpace && parentStack.top.displayInner.startsWith("table")) {
+            // NOP
+          } else {
+            parentStack.top.appendChild(ab)
+          }
+        }
+        case btnp: BoxTreeNodeProps => addWithChecks(btnp)
+      }
+    }
+
+    origDomChildren foreach {child => add(child)}
+
+    // unwind
+    while (parentStack.nonEmpty) {
+      val popped = parentStack.pop()
+      if (parentStack.nonEmpty) {
+        // println(s"appending $popped to ${parentStack.top}")
+        parentStack.top.appendChild(popped)
+      }
+    }
+
+    boxyDomChildren.foreach {case bwp: BoxTreeNodeProps => bwp.adjustChildren(); case _ => }
+
+
+  }
 
   val tag = elemNode.elem.tag
 
@@ -193,10 +365,6 @@ class BoxWithProps(
     boxyDomChildren.foreach(_.computeL2Props(vwProps))
   }
 
-  def initProps(vwProps: ViewPortProps):Unit = {
-    computeL2Props(vwProps)
-  }
-
   private val blockLevel = displayOuter == "block"
 
   def dump(level: Int): String = {
@@ -285,38 +453,39 @@ class BoxWithProps(
         widthSpecified, compMinWidth, compMaxWidth,
         heightSpecified, fontProp, offsets,
         textAlign)
-
-      if (displayOuter == "block") {
-        Vector(new BlockContent(aParent, None, debugId, renderPropsComputed) {
-              def getFormattingContext() = applicableFormattingContext
-              def getSubContent() = boxyDomChildren.flatMap(_.getContents(this, vwProps))
-              override def toString = "blk cntnt wrpr for " + debugId
-              val props = compProps
-            }
-        )
-      } else {
-        if (tag == "br") {
-          Vector(new InlineBreak(aParent))
+      // if (displayInner.startsWith("table")) {
+        // BoxUtil.mkTableContent(aParent, compProps, renderPropsComputed, boxyDomChildren, vwProps)
+      // } else {
+        if (displayOuter == "block") {
+          Vector(new BlockContent(aParent, None, debugId, renderPropsComputed) {
+                def getFormattingContext() = applicableFormattingContext
+                def getSubContent() = boxyDomChildren.flatMap(_.getContents(this, vwProps))
+                override def toString = "blk cntnt wrpr for " + debugId
+                val props = compProps
+              }
+          )
         } else {
-          if (displayInner != "flow") {
-            Vector(new InlineRenderable() {
-              override def toString = "inline wrapper for " + debugId
-              val parent: Content = aParent
-              def paintSelf(g: Graphics2D): Unit = { }
-              val isBreak: Boolean = false
-              override def getFormattingContext() = applicableFormattingContext
-              override def getSubContent() = boxyDomChildren.flatMap(_.getContents(this, vwProps))
-
-              val props = compProps
-              val renderProps: RenderProps = renderPropsComputed
-            })
+          if (tag == "br") {
+            Vector(new InlineBreak(aParent))
           } else {
-            boxyDomChildren.flatMap(_.getContents(aParent, vwProps))
+            if (displayInner != "flow") {
+              Vector(new StandardInlineRenderable(aParent, debugId, applicableFormattingContext, compProps, renderPropsComputed, boxyDomChildren, vwProps))
+            } else {
+              boxyDomChildren.flatMap(_.getContents(aParent, vwProps))
+            }
           }
         }
-      }
+      // }
     }
   }
+}
+
+class StandardInlineRenderable(val parent: Content, debugId: String, fc: FormattingContext, val props: LayoutProps, val renderProps: RenderProps, domChildren: Vector[BoxTreeNode], vwProps: ViewPortProps) extends InlineRenderable {
+  override def toString = "inline wrapper for " + debugId
+  def paintSelf(g: Graphics2D): Unit = { }
+  val isBreak: Boolean = false
+  override def getFormattingContext() = fc
+  override def getSubContent() = domChildren.flatMap(_.getContents(this, vwProps))
 }
 
 sealed trait ContainingAreaType
@@ -325,6 +494,12 @@ case object PaddingArea extends ContainingAreaType
 case object ContentArea extends ContainingAreaType
 
 object BoxUtil {
+  def mkTableContent(aParent: Content, props: LayoutProps, renderProps: RenderProps, domChildren: Vector[BoxTreeNode], vwProps: ViewPortProps): Vector[Content] = {
+    if (props.displayInner == "table") {
+
+    }
+    ???
+  }
 
   val displayOuterMap = Map(
     "none" -> "none",

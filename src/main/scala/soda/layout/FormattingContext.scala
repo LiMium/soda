@@ -90,12 +90,12 @@ object FCUtil {
     }
   }
 
-  def positionAbsolutes(c: Content, lc: LayoutConstraints) = {
+  def positionAbsolutes(c: Content, vwProps: ViewPortProps) = {
     c.absolutes.foreach {abs =>
       val cWidth = abs.containingWidth
       val cHeight = abs.containingHeight
 
-      val absLC = new LayoutConstraints(FitToShrink(cWidth), FitToShrink(cHeight), lc.vwProps)
+      val absLC = new LayoutConstraints(FitToShrink(cWidth), FitToShrink(cHeight), vwProps)
       abs.getFormattingContext().innerLayout(abs, 0, absLC)
 
       def resolveAbsLength(s: LengthSpec, cl: Int) = { abs.resolveLength(s, Some(cl), autoValue = None, noneValue = None) }

@@ -259,7 +259,7 @@ final class FlowFormattingContext extends FormattingContext {
   import FCUtil._
 
   def innerLayout(c: Content, marginCollapseTopAvl: Int, lc: LayoutConstraints) = {
-    Util.logLayout(1, s"  inner layout of $c", c.level)
+    Util.logLayout(1, s"  flow inner layout of $c", c.level)
 
     c.hydrateSimpleProps()
 
@@ -332,9 +332,9 @@ final class FlowFormattingContext extends FormattingContext {
       c.box.contentHeight = c.miniContext.getHeight
     }
 
-    positionAbsolutes(c, lc)
+    positionAbsolutes(c, lc.vwProps)
 
-    Util.logLayout(1, s"✓ inner layout of $c, dim: ${c.box.marginBoxWidth} x ${c.box.marginBoxHeight}", c.level)
+    Util.logLayout(1, s"✓ flow inner layout of $c, dim: ${c.box.marginBoxWidth} x ${c.box.marginBoxHeight}", c.level)
 
     c.box.marginBoxHeight - marginCollapseOffset
   }
