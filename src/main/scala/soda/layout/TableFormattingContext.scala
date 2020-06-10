@@ -213,22 +213,44 @@ object TFCUtil {
  **/
 final class TableFormattingContext extends FormattingContext {
 
+  type contents = Vector[Content]
+
+  private def seggregate(subs: contents): (contents, contents, contents, contents) = {
+    var captions: contents = Vector.empty
+    var headers: contents = Vector.empty
+    var rows: contents = Vector.empty
+    var footers: contents = Vector.empty
+    subs foreach {sub =>
+      sub.props.displayInner match {
+        case "table-caption" => captions :+= sub
+        case "table-header-group" => headers :+= sub
+        case "table-row-group" => rows :+= sub
+        case "table-footer-group" => footers :+= sub
+        case x => println("Ignoring table sub: " + x)
+      }
+    }
+    (captions, headers, rows, footers)
+  }
+
   override def innerLayout(c: Content, marginCollapseTopAvl: Int, lc: LayoutConstraints): Int = {
     Util.logLayout(1, s"  table inner layout of $c", c.level)
 
     c.hydrateSimpleProps()
 
     val mc = new TableFixedLayoutMiniContext(c)
-    c.getSubContent() foreach {tc =>
-      val tcInner = tc.props.displayInner
-      if (tcInner == "table-row") {
-        println("Huh")
-        // mc.add(tc)
-        ???
-      } else if (TFCUtil.groupDIs.contains(tcInner)) {
-        mc.add(tc)
+    val subs = c.getSubContent()
+    val (captions, headers, rows, footers) = seggregate(subs)
+    headers foreach (mc.add)
+    rows foreach (mc.add)
+    footers foreach (mc.add)
+
+    /*subs foreach {sub =>
+      val subInner = sub.props.displayInner
+      if (TFCUtil.groupDIs.contains(subInner)) {
+        mc.add(sub)
       }
-    }
+    }*/
+
     mc.finishLayout(lc.vwProps)
     c.miniContext = mc
     val mcHeight = mc.getHeight
