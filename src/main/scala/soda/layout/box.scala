@@ -2,7 +2,6 @@ package soda.layout
 
 import java.awt.Graphics2D
 import java.awt.Color
-import cz.vutbr.web.css.TermLengthOrPercent
 
 class Sides[T](initial: => T) {
   var top: T = initial
@@ -102,13 +101,13 @@ class Box {
         g.fillRect(marginThickness.left, marginThickness.top, borderBoxWidth, borderBoxHeight)
       }
 
-      def calcOffset(pos: TermLengthOrPercent, width: Int) = {
+      def calcOffset(pos: AbsOrPercent, width: Int) = {
         if (pos == null) {
           0
-        } else if (pos.isPercentage()) {
-          (pos.getValue() * width/100).toInt
+        } else if (pos.isPercent) {
+          (pos.value * width/100).toInt
         } else {
-          (pos.getValue()).toInt
+          (pos.value).toInt
         }
       }
 
@@ -130,6 +129,8 @@ class Box {
 
         val imageX = calcOffset(bgProps.posX, pw - iw)
         val imageY = calcOffset(bgProps.posY, ph - ih)
+        val imageX = calcOffset(bgProps.posXComputed, pw - iw)
+        val imageY = calcOffset(bgProps.posYComputed, ph - ih)
 
         var startX = if (xCount == 1) bLeft+imageX else bLeft%iw - (iw - (imageX % iw))
         var startY = if (yCount == 1) bTop+imageY else bTop%ih - (ih - (imageY % ih))

@@ -168,7 +168,7 @@ class BoxWithProps(
     colorProp.init(nd, parentColor)
     fontProp.init(nd, domParentBox.map(_.fontProp), vwProps)
     computeBorderProps(vwProps)
-    backgroundProps.init(nd)
+    backgroundProps.init(nd, fontProp)
     visibility = parseVisibility()
     overflowX = Property.getSpec(nd, "overflow-x").getOrElse("visible")
     overflowY = Property.getSpec(nd, "overflow-y").getOrElse("visible")

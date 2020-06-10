@@ -64,6 +64,7 @@ case object ThickLength extends LengthSpec
 object LengthProp {
   val zeroAbsLength = AbsLength(0)
 
+  // TODO: Use the TermUnitOrPercentage class from jParser, instead of String
   def parseSpec(specStr: String, initial: LengthSpec = AutoLength): LengthSpec = {
     if (specStr != null) {
       if (specStr == "medium") {
@@ -327,14 +328,16 @@ class FontProp {
   }
 }
 
+case class AbsOrPercent(value: Float, isPercent: Boolean)
+
 class BackgroundProps() {
   val color = new ColorProp("background-color")
   val repeat = new SimpleStringProp("background-repeat", "repeat")
   private var imgSpec: URL = null
-  var posX: TermLengthOrPercent = null
-  var posY: TermLengthOrPercent = null
+  var posXComputed: AbsOrPercent = null
+  var posYComputed: AbsOrPercent = null
 
-  def init(nd: NodeData) = {
+  def init(nd: NodeData, fontProp: FontProp) = {
     color.init(nd, null)
     repeat.init(nd)
     val tu : TermURI = nd.getValue(classOf[TermURI], "background-image", false)
@@ -348,11 +351,31 @@ class BackgroundProps() {
 
       val pos = nd.getValue(classOf[TermList], "background-position", false)
       if (pos != null) {
-        posX = pos.get(0).asInstanceOf[TermLengthOrPercent]
-        posY = pos.get(1).asInstanceOf[TermLengthOrPercent]
+        val posX = pos.get(0).asInstanceOf[TermLengthOrPercent]
+        val posY = pos.get(1).asInstanceOf[TermLengthOrPercent]
+        posXComputed = computeOffset(posX, fontProp)
+        posYComputed = computeOffset(posY, fontProp)
       } else {
-        posX = null
-        posY = null
+        posXComputed = null
+        posXComputed = null
+      }
+    }
+  }
+
+  private def computeOffset(p: TermLengthOrPercent, fontProp: FontProp):AbsOrPercent = {
+    if (p.isPercentage()) {
+      AbsOrPercent(p.getValue(), true)
+    } else {
+      p.getUnit().value() match {
+        case "em" => AbsOrPercent(fontProp.emHeight * p.getValue(), false)
+        case "pt" => AbsOrPercent(96f * p.getValue() / 72f, false)
+        case "px" => AbsOrPercent(p.getValue(), false)
+        case "pc" => AbsOrPercent(96f * p.getValue()/ 6f, false)
+        case "ex" => AbsOrPercent(p.getValue() * fontProp.exHeight, false)
+        case "cm" => AbsOrPercent(p.getValue() * 96f / 2.54f, false)
+        case "mm" => AbsOrPercent(p.getValue() * 96f / 25.4f, false)
+        case "in" => AbsOrPercent(p.getValue() * 96f, false)
+        case "" => AbsOrPercent(p.getValue(), false)
       }
     }
   }
