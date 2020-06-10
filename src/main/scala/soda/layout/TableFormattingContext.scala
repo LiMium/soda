@@ -10,8 +10,14 @@ final private class TableCell(val c: Content) {
     c.paintAll(g)
   }
 
-  def getDeclaredWidth(tableWidthOpt: Option[Int]): Option[Int] = {
+  /* def getDeclaredTotalWidth(tableWidthOpt: Option[Int]): Option[Int] = {
     c.resolveLength(c.props.width, tableWidthOpt.map(_.toFloat), None, None).map(dw => dw + c.box.borderWidth + c.box.paddingWidth)
+  }*/
+
+  def getDeclaredTotalWidth(tableWidthOpt: Option[Int]): (Option[Int], Int) = {
+    val cwOpt = c.resolveLength(c.props.width, tableWidthOpt.map(_.toFloat), None, None).map(dw => dw + c.box.borderWidth + c.box.paddingWidth)
+
+    cwOpt -> c.box.marginBoxSansContentWidth
   }
 
   def findPrefWidths() = {
@@ -21,7 +27,7 @@ final private class TableCell(val c: Content) {
       val w = c.resolveLength(c.props.width, 0).getOrElse(0)
       PrefWidths(w, w)
     } else {
-      c.getFormattingContext().preferredWidths(c)
+      c.getFormattingContext().preferredWidths(c, true)
     }
   }
 
@@ -40,23 +46,26 @@ final private class TableRow(startX: Int, c: Content) {
   }
 
   def paint(g: Graphics2D): Unit = {
-    println("Painting row: " + c)
     c.paintAll(g)
     cells foreach {_.paint(g)}
   }
 
-  def declWidths(tableWidthOpt: Option[Int]): Vector[Option[Int]] = {
-    cells.map(_.getDeclaredWidth(tableWidthOpt))
+  /*def declWidths(tableWidthOpt: Option[Int]): Vector[Option[Int]] = {
+    cells.map(_.getDeclaredTotalWidth(tableWidthOpt))
+  }*/
+  def declWidths(tableWidthOpt: Option[Int]): Vector[(Option[Int], Int)] = {
+    cells.map(_.getDeclaredTotalWidth(tableWidthOpt))
   }
 
   def findWidths(tableWidthOpt: Option[Int]): Vector[Int] = {
     val declaredWidths = declWidths(tableWidthOpt)
-    val declaredTotalWidth = declaredWidths.map(_.getOrElse(0)).sum
+    val declaredTotalWidth = declaredWidths.map(_._1.getOrElse(0)).sum
+    // val declaredTotalWidth = declWidths(tableWidthOpt).sum
     val avlWidth = math.max(tableWidthOpt.getOrElse(0), declaredTotalWidth)
     val remWidth = avlWidth - declaredTotalWidth
-    val numUndeclared = declaredWidths.count(_.isEmpty)
+    val numUndeclared = declaredWidths.count(_._1.isEmpty)
     val remPerCell = if (numUndeclared > 0) { remWidth / numUndeclared } else { 0 }
-    declaredWidths.map(_.getOrElse(remPerCell))
+    declaredWidths.map(wt => wt._1.getOrElse(remPerCell) + wt._2)
   }
 
   def findPrefWidths(): Vector[Int] = {
@@ -127,7 +136,7 @@ final private class TableRowGroup(startX: Int, trgc: Content) {
     rows foreach {_.paint(g)}
   }
 
-  def declWidths(tableWidthOpt: Option[Int]): Vector[Option[Int]] = {
+  def declWidths(tableWidthOpt: Option[Int]): Vector[(Option[Int], Int)] = {
     rows.flatMap(_.declWidths(tableWidthOpt))
   }
 
@@ -263,7 +272,8 @@ final class TableFormattingContext extends FormattingContext {
     c.box.marginBoxHeight
   }
 
-  override def preferredWidths(c: Content): PrefWidths = {
+  override def preferredWidths(c: Content, withMarginPaddingBorder: Boolean): PrefWidths = {
+    // TODO: honour `withMarginPaddingBorder` parameter
     val rwOpt = c.resolveLength(c.props.width, Some(c.containingWidth), autoValue = None, noneValue = None)
     val pwResult = rwOpt.map(rw => PrefWidths(rw, rw)).getOrElse({
       val subs = c.getSubContent()
@@ -277,7 +287,7 @@ final class TableFormattingContext extends FormattingContext {
         firstRowOpt.map {firstRow =>
           val firstRowCells = firstRow.getSubContent().filter(_.props.displayInner == "table-cell")
           // val declaredWidths = firstRowCells.map(cell => cell.resolveLength(cell.props.width, None, None, None).map(dw => dw + c.box.borderWidth + c.box.paddingWidth))
-          val pws = firstRowCells.map(cell => cell.getFormattingContext().preferredWidths(cell))
+          val pws = firstRowCells.map(cell => cell.getFormattingContext().preferredWidths(cell, true))
           val prefMinWidth = pws.map(_.prefMinWidth).sum
           val prefWidth = pws.map(_.prefWidth).sum
           PrefWidths(prefMinWidth, prefWidth)
@@ -287,7 +297,7 @@ final class TableFormattingContext extends FormattingContext {
         val rows = subs.flatMap(s => if (TFCUtil.groupDIs.contains(s.props.displayInner)) s.getSubContent else None)
         val allPWs = rows.map { row =>
           val cells = row.getSubContent().filter(_.props.displayInner == "table-cell")
-          cells.map(cell => cell.getFormattingContext().preferredWidths(cell))
+          cells.map(cell => cell.getFormattingContext().preferredWidths(cell, true))
         }
         println(allPWs)
         val maxCols = allPWs.map(_.size).maxOption.getOrElse(0)

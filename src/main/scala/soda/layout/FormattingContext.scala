@@ -21,8 +21,10 @@ trait FormattingContext {
     * Compute the `preferred min width` and `preferred width` as per section 10.3.5 of CSS 2.2
     *
     * These are useful for shrink-fit calculation
+    *
+    * @param withMarginPaddingBorder   include margin + padding + porder widths
     */
-  def preferredWidths(c: Content): PrefWidths
+  def preferredWidths(c: Content, withMarginPaddingBorder: Boolean): PrefWidths
 }
 
 // Currently requires an `img`, but can be abstracted later
@@ -49,7 +51,8 @@ final class SimpleReplacedFormattingContext(img: BufferedImage) extends Formatti
     h
   }
 
-  def preferredWidths(c: Content): PrefWidths = {
+  def preferredWidths(c: Content, withMarginPaddingBorder: Boolean): PrefWidths = {
+    // TODO: Honor `withMarginPaddingBorder` parameter
     val (w,h) = resolveDim(c)
     PrefWidths(w, w)
   }
@@ -153,7 +156,7 @@ object FCUtil {
       val mLeft = cMarginLeft.getOrElse(0)
       val mRight = cMarginRight.getOrElse(0)
       val actualAvlWidth = avlWidth - (mLeft + mRight + c.box.paddingWidth + c.box.borderWidth)
-      val pw = c.getFormattingContext.preferredWidths(c)
+      val pw = c.getFormattingContext.preferredWidths(c, false)
       val shrinkToFitWidth = math.min(math.max(pw.prefMinWidth, actualAvlWidth), pw.prefWidth)
       (shrinkToFitWidth, mLeft, mRight)
     }

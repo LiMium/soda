@@ -339,9 +339,21 @@ final class FlowFormattingContext extends FormattingContext {
     c.box.marginBoxHeight - marginCollapseOffset
   }
 
-  def preferredWidths(c: Content): PrefWidths = {
+  private def computeMarginPaddingBorderWidth(c: Content) : Int = {
+    val ml = c.resolveLength(c.props.margin.left, None, None, None).getOrElse(0)
+    val mr = c.resolveLength(c.props.margin.right, None, None, None).getOrElse(0)
+    val bl = c.props.border.left.thickness
+    val br = c.props.border.right.thickness
+    val pl = c.resolveLength(c.props.padding.left, None, None, None).getOrElse(0)
+    val pr = c.resolveLength(c.props.padding.right, None, None, None).getOrElse(0)
+
+    ml + mr + pl + pr + bl + br
+  }
+
+  def preferredWidths(c: Content, withMarginPaddingBorder: Boolean): PrefWidths = {
+    val mbpThickness = if (withMarginPaddingBorder) computeMarginPaddingBorderWidth(c) else 0
     val rwOpt = c.resolveLength(c.props.width, Some(c.containingWidth), autoValue = None, noneValue = None)
-    val pwResult = rwOpt.map(rw => PrefWidths(rw, rw)).getOrElse({
+    val pwResult = rwOpt.map(rw => PrefWidths(rw + mbpThickness, rw + mbpThickness)).getOrElse({
       var prefMinWidth = 0
       var prefWidth = 0
       var currLinePrefWidth = 0
@@ -366,7 +378,7 @@ final class FlowFormattingContext extends FormattingContext {
                   case x => println(x); ???
                 }
               } else {
-                irFC.preferredWidths(ir)
+                irFC.preferredWidths(ir, true)
               }
               prefWidth += pw.prefWidth
               if (pw.prefMinWidth > prefMinWidth) {
@@ -375,7 +387,7 @@ final class FlowFormattingContext extends FormattingContext {
             }
           case bc: BlockContent =>
             endLine()
-            val pw = bc.getFormattingContext().preferredWidths(bc)
+            val pw = bc.getFormattingContext().preferredWidths(bc, true)
             if (pw.prefWidth > prefWidth) {
               prefWidth = pw.prefWidth
             }
@@ -386,7 +398,7 @@ final class FlowFormattingContext extends FormattingContext {
       })
       endLine()
 
-      PrefWidths(prefMinWidth, prefWidth)
+      PrefWidths(prefMinWidth + mbpThickness, prefWidth + mbpThickness)
     })
     pwResult
   }
