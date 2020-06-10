@@ -124,21 +124,22 @@ class Box {
         val xCount = if (rep == "repeat" || rep == "repeat-x") 2 + math.ceil(bbWidth.toDouble / iw).toInt else 1
         val yCount = if (rep == "repeat" || rep == "repeat-y") 2 + math.ceil(bbHeight.toDouble / ih).toInt else 1
 
+        val mLeft = marginThickness.left
+        val mTop = marginThickness.top
         val bLeft = border.left.thickness
         val bTop = border.top.thickness
 
-        val imageX = calcOffset(bgProps.posX, pw - iw)
-        val imageY = calcOffset(bgProps.posY, ph - ih)
+        // TODO: When padding width is smaller than image width, the second parameter becomes negative. Needs a check
         val imageX = calcOffset(bgProps.posXComputed, pw - iw)
         val imageY = calcOffset(bgProps.posYComputed, ph - ih)
 
-        var startX = if (xCount == 1) bLeft+imageX else bLeft%iw - (iw - (imageX % iw))
-        var startY = if (yCount == 1) bTop+imageY else bTop%ih - (ih - (imageY % ih))
+        var startX = mLeft + (if (xCount == 1) bLeft+imageX else bLeft%iw - (iw - (imageX % iw)))
+        var startY = mTop + (if (yCount == 1) bTop+imageY else bTop%ih - (ih - (imageY % ih)))
 
         val endX = startX + (xCount * iw)
         val endY = startY + (yCount * ih)
 
-        bgGraphics.setClip(marginThickness.left, marginThickness.top, bbWidth, bbHeight)
+        bgGraphics.setClip(mLeft, mTop, bbWidth, bbHeight)
         for (y <- startY until endY by ih) {
           for (x <- startX until endX by iw) {
             bgGraphics.drawImage(bi, x, y, bi.getWidth(), bi.getHeight(), null)
