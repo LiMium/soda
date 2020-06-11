@@ -28,13 +28,6 @@ sealed trait BoxTreeNodeProps extends BoxTreeNode {
   def adjustChildren(): Unit
 }
 
-sealed trait InnerBoxType
-case object InlineBoxType extends InnerBoxType
-case object TableWrapperBoxType extends InnerBoxType
-case object BlockContainerBoxType extends InnerBoxType
-case object FlexContainerBoxType extends InnerBoxType
-case object GridContainerBoxType extends InnerBoxType
-
 class AnonBox(val tn: TextNode, val creator: BoxWithProps) extends BoxTreeNode {
   def getContents(parent: Content, vwProps:ViewPortProps): Vector[Content] = {
     val words = getWords
