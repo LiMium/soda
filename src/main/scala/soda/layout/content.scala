@@ -66,6 +66,9 @@ sealed trait Content {
   var miniContext: MiniContext[_] = null
   var absolutes: Vector[Content] = Vector.empty
 
+  val isBreak: Boolean = false
+  val isSpace: Boolean = false
+
   // after layout
   /**
     * Paint self within the content box
@@ -209,16 +212,13 @@ abstract class BlockContent(val parent: Content, canPaintOpt: Option[CanPaint], 
 }
 
 trait InlineRenderable extends Content {
-  val isBreak: Boolean
-  val isSpace: Boolean = false
-
   def getFormattingContext():FormattingContext = null
   def getSubContent(): Vector[Content] = Vector.empty
 }
 
 final class InlineBreak(val parent: Content) extends InlineRenderable {
   def paintSelf(g: Graphics2D): Unit = {}
-  val isBreak: Boolean = true
+  override val isBreak: Boolean = true
   val props = new LayoutProps(
     "inline", "flow", "static",
     new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
@@ -246,7 +246,6 @@ final class InlineWordRenderable(val parent: Content, word: String, visibility: 
   private val estWidth = AbsLength(fontProp.estWidth(word))
   private val estHeight = AbsLength(Util.relaxedCeiling(measuredHeight))
 
-  val isBreak: Boolean = false
   override val isSpace: Boolean = word == " "
   val props = new LayoutProps(
     "inline", "flow", "static",
@@ -304,3 +303,60 @@ case class LayoutConstraints(
   widthConstraint: LengthConstraint,
   heightConstraint: LengthConstraint,
   vwProps: ViewPortProps)
+
+/* Represents the table wrapper box */
+final class TableContent(debugStr: String, aProps: LayoutProps, aRenderProps: RenderProps, val parent: Content, domChildren: Vector[BoxTreeNode], vwProps: ViewPortProps) extends Content {
+  private val fc = new FlowFormattingContext()
+
+  /* Section 17.4, CSS 2.2: The computed values of properties 'position', 'float', 'margin-*', 'top', 'right', 'bottom',
+   * and 'left' on the table element are used on the table wrapper box and not the table grid box; all other values of
+   * non-inheritable properties are used on the table grid box and not the table wrapper box.
+   */
+  val props: soda.layout.LayoutProps = new LayoutProps(aProps.displayOuter, "table-wrapper-box", aProps.position,
+      aProps.margin, ContentUtil.emptyBorder, aProps.offsets,
+      AutoLength, ContentUtil.zeroLength, NoneLength,
+      NoneLength, aProps.fontProp, ContentUtil.emptyOffsets)
+
+  val renderProps: RenderProps = new RenderProps(null, "visible", "visible", true)
+
+  val gridBoxProps = new LayoutProps("block", "table-grid-box", "static",
+      new Sides[LengthSpec](NoneLength), aProps.border, aProps.padding,
+      aProps.width, aProps.compMinWidth, aProps.compMaxWidth,
+      aProps.height, aProps.fontProp, aProps.offsets)
+
+  override def getFormattingContext(): FormattingContext = fc
+
+  override def getSubContent(): Vector[Content] = {
+    var captions = Vector[Content]()
+    var headerGroups = Vector[Content]()
+    var rowGroups = Vector[Content]()
+    var footerGroups = Vector[Content]()
+    val aProps = props
+    domChildren.foreach {
+      // case _: AnonBox =>  ???
+      case ab: AnonBox =>  println("Ignoring anon box:" + ab)
+      case btnp: BoxTreeNodeProps =>
+        btnp.displayInner match {
+          case "table-caption" => captions :++= btnp.getContents(this, vwProps)
+          case "table-header-group" => headerGroups :++= btnp.getContents(this, vwProps)
+          case "table-row-group" => rowGroups :++= btnp.getContents(this, vwProps)
+          case "table-footer-group" => footerGroups :++= btnp.getContents(this, vwProps)
+          case "table-column-group" => println("Ignoring column-group: " + btnp)
+        }
+    }
+
+    val gridSubs = headerGroups ++ rowGroups ++ footerGroups
+
+    val tableGridContent = new BlockContent(parent, None, "table-grid-box", aRenderProps) {
+      def getFormattingContext(): soda.layout.FormattingContext = new TableFormattingContext()
+      def getSubContent(): Vector[soda.layout.Content] = gridSubs
+      val props: LayoutProps = gridBoxProps
+    }
+
+    captions :+ tableGridContent
+  }
+
+  override def paintSelf(g: Graphics2D): Unit = {}
+
+  override def toString(): String = "Table content: " + debugStr
+}

@@ -74,11 +74,15 @@ class AnonGeneratedBox(aProps: LayoutProps, fcOpt: Option[FormattingContext]) ex
     val bgProps = new BackgroundProps()
     val rp = new RenderProps(bgProps, "visible", "visible", true)
     val fc = fcOpt.getOrElse(parent.getFormattingContext())
-    val content = new BlockContent(parent, None, "anon gen box", rp) {
-      def getFormattingContext() = fc
-      def getSubContent() = domChildren.flatMap(_.getContents(this, vwProps))
-      override def toString = "anon gen box"
-      val props = aProps
+    val content = if (displayInner == "table") {
+      new TableContent("Anon Gen Box for " + displayInner, aProps, rp, parent, domChildren, vwProps)
+    } else {
+      new BlockContent(parent, None, "anon gen box", rp) {
+        def getFormattingContext() = fc
+        def getSubContent() = domChildren.flatMap(_.getContents(this, vwProps))
+        override def toString = "anon gen box"
+        val props = aProps
+      }
     }
     Vector(content)
   }
@@ -119,11 +123,25 @@ class BoxWithProps(
     val parentStack = mutable.Stack[BoxTreeNodeProps]()
     parentStack.push(this)
 
+    def popOne() = {
+      if (parentStack.size > 1) {
+        val popped = parentStack.pop
+        parentStack.top.appendChild(popped)
+      }
+    }
+
     def needParent(level: Int, needDIs: List[String]):Unit = {
-      // val index = math.min(parentStack.size - 1, level)
-      // val create = needDI != parentStack(index).displayInner
-      // val create = !parentStack.exists(_.displayInner == needDI)
-      // val create = parentStack.top.displayInner != needDI
+      // if (level == 0) {
+      {
+        val lastIndex = parentStack.lastIndexWhere(p => needDIs.contains(p.displayInner))
+        if (lastIndex > 0) {
+          // println(s"Found $needDIs at $lastIndex / $parentStack")
+          for (i <- 0 until lastIndex) {
+            popOne()
+            // println(s"  after popping: $parentStack")
+          }
+        }
+      }
       val create = !needDIs.contains(parentStack.top.displayInner)
       if (create) {
         // println(s"  needed $needDIs @level $level, stack: ${parentStack.map(_.displayInner)} ${parentStack.size}")
@@ -139,27 +157,25 @@ class BoxWithProps(
           new Sides[LengthSpec](NoneLength), ContentUtil.emptyBorder, ContentUtil.emptyOffsets,
           AutoLength, ContentUtil.zeroLength, NoneLength,
           NoneLength, fontProp, ContentUtil.emptyOffsets)
-        val fcOpt = if (needDI == "table") Some(new TableFormattingContext()) else None
+        val fcOpt = None
         val anonGenBox = new AnonGeneratedBox(props, fcOpt)
         // println("    pushing anon: " + needDI + " on top of " + parentStack.map(_.displayInner))
         parentStack.push(anonGenBox)
       }
     }
 
-
     def popSibling(siblingDI: String) = {
-      if (parentStack.size > 1) {
-        if (parentStack.top.displayInner == siblingDI) {
-          // println("Popping sibling: " + siblingDI)
-          val popped = parentStack.pop
-          parentStack.top.appendChild(popped)
-        }
+      if (parentStack.top.displayInner == siblingDI) {
+        // println("Popping sibling: " + siblingDI)
+        popOne()
       }
     }
 
     def addWithChecks(child: BoxTreeNodeProps): Unit = {
       // println(s"In $debugId $displayInner, adding child: $child ${child.displayInner}")
-      if (child.displayInner == "table-column") {
+      if (child.displayInner == "table-caption") {
+        needParent(0, List("table"))
+      } else if (child.displayInner == "table-column") {
         needParent(0, List("table-column-group"))
       } else if (child.displayInner == "table-column-group") {
         needParent(0, List("table"))
@@ -192,7 +208,7 @@ class BoxWithProps(
         popSibling("table-footer-group")
         needParent(0, List("table"))
       } else {
-        if (parentStack.last.displayInner.startsWith("table")) {
+        if (BoxUtil.tableCellContainers.contains(parentStack.last.displayInner)) {
           // popSibling("table-cell")
           needParent(0, List("table-cell"))
         } else {
@@ -211,9 +227,14 @@ class BoxWithProps(
     def add(child: BoxTreeNode) = {
       child match {
         case ab: AnonBox => {
-          if (ab.isJustSpace && parentStack.top.displayInner.startsWith("table")) {
-            // NOP
+          if (ab.isJustSpace) {
+            if (!parentStack.top.displayInner.startsWith("table")) {
+              parentStack.top.appendChild(ab)
+            }
           } else {
+            if (parentStack.top.displayInner.startsWith("table")) {
+              needParent(0, List("table-cell"))
+            }
             parentStack.top.appendChild(ab)
           }
         }
@@ -283,8 +304,6 @@ class BoxWithProps(
   // formatting context established by this box
   private val formattingContext: Option[FormattingContext] = if (isReplaced) {
     Some(new SimpleReplacedFormattingContext(img))
-  } else if (displayInner == "table") {
-    Some(new TableFormattingContext)
   } else if (isRootElem || createsBFC) {
     Some(new FlowFormattingContext)
   } else {
@@ -433,7 +452,6 @@ class BoxWithProps(
         Vector(new InlineRenderable {
           val parent = aParent
           override def toString = "inline replaced " + debugId
-          val isBreak: Boolean = false
           def paintSelf(g: Graphics2D): Unit = {
             g.drawImage(img, 0, 0, box.contentWidth, box.contentHeight, null)
           }
@@ -453,9 +471,9 @@ class BoxWithProps(
         widthSpecified, compMinWidth, compMaxWidth,
         heightSpecified, fontProp, offsets,
         textAlign)
-      // if (displayInner.startsWith("table")) {
-        // BoxUtil.mkTableContent(aParent, compProps, renderPropsComputed, boxyDomChildren, vwProps)
-      // } else {
+      if (displayInner == "table") {
+        Vector(new TableContent(debugId, compProps, renderPropsComputed, aParent, boxyDomChildren, vwProps))
+      } else {
         if (displayOuter == "block") {
           Vector(new BlockContent(aParent, None, debugId, renderPropsComputed) {
                 def getFormattingContext() = applicableFormattingContext
@@ -475,7 +493,7 @@ class BoxWithProps(
             }
           }
         }
-      // }
+      }
     }
   }
 }
@@ -483,7 +501,6 @@ class BoxWithProps(
 class StandardInlineRenderable(val parent: Content, debugId: String, fc: FormattingContext, val props: LayoutProps, val renderProps: RenderProps, domChildren: Vector[BoxTreeNode], vwProps: ViewPortProps) extends InlineRenderable {
   override def toString = "inline wrapper for " + debugId
   def paintSelf(g: Graphics2D): Unit = { }
-  val isBreak: Boolean = false
   override def getFormattingContext() = fc
   override def getSubContent() = domChildren.flatMap(_.getContents(this, vwProps))
 }
@@ -494,12 +511,7 @@ case object PaddingArea extends ContainingAreaType
 case object ContentArea extends ContainingAreaType
 
 object BoxUtil {
-  def mkTableContent(aParent: Content, props: LayoutProps, renderProps: RenderProps, domChildren: Vector[BoxTreeNode], vwProps: ViewPortProps): Vector[Content] = {
-    if (props.displayInner == "table") {
-
-    }
-    ???
-  }
+  val tableCellContainers = List("table", "table-row-group", "table-header-group", "table-footer-group", "table-row")
 
   val displayOuterMap = Map(
     "none" -> "none",

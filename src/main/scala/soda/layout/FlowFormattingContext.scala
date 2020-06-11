@@ -6,9 +6,9 @@ import soda.layout.ViewPortProps
 import java.awt.Color
 
 sealed trait Queued {
-  protected var queue: Vector[InlineRenderable] = Vector.empty
+  protected var queue: Vector[Content] = Vector.empty
 
-  protected def appendToQueue(ir: InlineRenderable) = {
+  protected def appendToQueue(ir: Content) = {
     queue :+= ir
   }
 
@@ -24,22 +24,22 @@ sealed trait Queued {
     *
     * @param ir
     */
-  protected def addImpl(ir: InlineRenderable): Unit
+  protected def addImpl(ir: Content): Unit
 }
 
 class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Queued {
-  private var renderables = Vector[InlineRenderable]()
+  private var renderables = Vector[Content]()
   private var height = 0
   private var width = 0
 
   def isNotEmpty = renderables.nonEmpty
 
-  def willFit(ir: InlineRenderable) = {
+  def willFit(ir: Content) = {
     val requiredSpace = ir.box.marginBoxWidth + queue.map(_.box.marginBoxWidth).sum
     (requiredSpace + width) <= maxWidth
   }
 
-  private def shouldIgnore(ir: InlineRenderable) = {
+  private def shouldIgnore(ir: Content) = {
     if (ir.isSpace) {
       renderables.lastOption.map(_.isSpace).getOrElse(true)
     } else {
@@ -47,7 +47,7 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
     }
   }
 
-  def add(ir: InlineRenderable) = {
+  def add(ir: Content) = {
     if (ir.isSpace || ir.isBreak) {
       appendToQueue(ir)
     } else {
@@ -56,7 +56,7 @@ class Line(val yPos: Int, val maxWidth: Int, vwProps: ViewPortProps) extends Que
     }
   }
 
-  protected def addImpl(ir: InlineRenderable): Unit = {
+  protected def addImpl(ir: Content): Unit = {
     if (!shouldIgnore(ir)) {
       ir.box.offsetX = width
 
@@ -100,19 +100,20 @@ class InlineMiniContext(level: Int, textAlign: String, lc: LayoutConstraints) ex
   private val newWc = FitToShrink(maxLineWidth)
 
   override def add(c: Content): Unit = {
-    c match {
-      case ir: InlineRenderable =>
+    c.props.displayOuter match {
+      case "inline" =>
+        val ir = c
         if (ir.isSpace || ir.isBreak) {
           appendToQueue(ir)
         } else {
           flushQueue()
           addImpl(ir)
         }
-      case bc: BlockContent => Util.warnln("Unexpected block content in inline mini context"); ???
+      case x => Util.warnln("Unexpected non-inline content in inline mini context: " + x);
     }
   }
 
-  protected def addImpl(ir: InlineRenderable) = {
+  protected def addImpl(ir: Content) = {
     Util.logLayout(2, s"adding ir $ir est dim ${ir.props.width}x${ir.props.height}", ir.level)
 
     if (ir.isBreak) {
@@ -297,12 +298,11 @@ final class FlowFormattingContext extends FormattingContext {
     }
     contents foreach {ch =>
       Util.logLayout(2, "considering " + ch, ch.level)
-      val mc = ch match {
-        case ir: InlineRenderable =>
+      val mc = ch.props.displayOuter match {
+        case "inline" =>
           initCurrIMC()
           currIMC
-        case bc: BlockContent =>
-          // println("  block content", bc)
+        case "block" =>
           if (currIMC != null) {
             currIMC.completeLayout()
             initCurrBMC()
@@ -366,8 +366,9 @@ final class FlowFormattingContext extends FormattingContext {
       }
 
       c.getSubContent().foreach(sc => {
-        sc match {
-          case ir: InlineRenderable =>
+        sc.props.displayOuter match {
+          case "inline" =>
+            val ir = sc
             if (ir.isBreak) {
               endLine()
             } else {
@@ -385,7 +386,8 @@ final class FlowFormattingContext extends FormattingContext {
                 prefMinWidth = pw.prefMinWidth
               }
             }
-          case bc: BlockContent =>
+          case _ =>
+            val bc = sc
             endLine()
             val pw = bc.getFormattingContext().preferredWidths(bc, true)
             if (pw.prefWidth > prefWidth) {

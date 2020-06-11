@@ -98,11 +98,14 @@ final private class TableRow(startX: Int, c: Content) {
     // layout the row
     c.hydrateSimpleProps()
     c.box.contentWidth = currX
-    c.box.contentHeight = cells.map(_.getMarginBoxHeight).sum
+    c.box.contentHeight = cells.map(_.getMarginBoxHeight).maxOption.getOrElse(0)
 
     maxHeight
   }
 
+  def setYOffset(yOffset: Int) = {
+    c.box.offsetY = yOffset
+  }
   def getMarginBoxWidth = c.box.marginBoxWidth
   def getMarginBoxHeight = c.box.marginBoxHeight
 }
@@ -146,7 +149,12 @@ final private class TableRowGroup(startX: Int, trgc: Content) {
 
   def finishLayout() = {
     trgc.box.contentWidth = rows.map(_.getMarginBoxWidth).maxOption.getOrElse(0)
-    trgc.box.contentHeight = rows.map(_.getMarginBoxHeight).sum
+    var currY = 0
+    for (row <- rows) {
+      row.setYOffset(currY)
+      currY += row.getMarginBoxHeight
+    }
+    trgc.box.contentHeight = currY
   }
 
   def getMarginBoxWidth = trgc.box.marginBoxWidth
@@ -194,7 +202,6 @@ final private class TableFixedLayoutMiniContext(tableContent: Content) extends M
     } else {
       val allWidths = rowGroups.flatMap { _.findPrefWidths()}
       val maxCols = allWidths.map(_.size).maxOption.getOrElse(0)
-      println(allWidths)
       ((0 until maxCols) map (col => allWidths.map(rowWidths => if (col < rowWidths.size) rowWidths(col) else 0).maxOption.getOrElse(0))).toVector
     }
     println(s" widths: " + widths)
@@ -222,25 +229,6 @@ object TFCUtil {
  **/
 final class TableFormattingContext extends FormattingContext {
 
-  type contents = Vector[Content]
-
-  private def seggregate(subs: contents): (contents, contents, contents, contents) = {
-    var captions: contents = Vector.empty
-    var headers: contents = Vector.empty
-    var rows: contents = Vector.empty
-    var footers: contents = Vector.empty
-    subs foreach {sub =>
-      sub.props.displayInner match {
-        case "table-caption" => captions :+= sub
-        case "table-header-group" => headers :+= sub
-        case "table-row-group" => rows :+= sub
-        case "table-footer-group" => footers :+= sub
-        case x => println("Ignoring table sub: " + x)
-      }
-    }
-    (captions, headers, rows, footers)
-  }
-
   override def innerLayout(c: Content, marginCollapseTopAvl: Int, lc: LayoutConstraints): Int = {
     Util.logLayout(1, s"  table inner layout of $c", c.level)
 
@@ -248,17 +236,7 @@ final class TableFormattingContext extends FormattingContext {
 
     val mc = new TableFixedLayoutMiniContext(c)
     val subs = c.getSubContent()
-    val (captions, headers, rows, footers) = seggregate(subs)
-    headers foreach (mc.add)
-    rows foreach (mc.add)
-    footers foreach (mc.add)
-
-    /*subs foreach {sub =>
-      val subInner = sub.props.displayInner
-      if (TFCUtil.groupDIs.contains(subInner)) {
-        mc.add(sub)
-      }
-    }*/
+    subs foreach (mc.add)
 
     mc.finishLayout(lc.vwProps)
     c.miniContext = mc
@@ -293,7 +271,6 @@ final class TableFormattingContext extends FormattingContext {
           PrefWidths(prefMinWidth, prefWidth)
         } getOrElse (PrefWidths(0, 0))
       } else {
-        // val rows = subs.flatMap(s => if (TFCUtil.groupDIs.contains(s.props.displayInner)) s.getSubContent else if (s.props.displayInner == "table-row") Some(s) else None)
         val rows = subs.flatMap(s => if (TFCUtil.groupDIs.contains(s.props.displayInner)) s.getSubContent else None)
         val allPWs = rows.map { row =>
           val cells = row.getSubContent().filter(_.props.displayInner == "table-cell")
